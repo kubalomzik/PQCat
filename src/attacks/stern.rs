@@ -1,6 +1,6 @@
 use crate::utils::{
     apply_errors, calculate_syndrome, generate_random_code, generate_random_error_vector,
-    subset_generator,
+    generate_subsets,
 };
 use ndarray::Array2;
 use rand::seq::SliceRandom;
@@ -43,7 +43,7 @@ pub fn sterns_algorithm(received_vector: &[u8], h: &Array2<u8>, weight: usize) -
     let mut right_map: HashMap<Vec<u8>, Vec<usize>> = HashMap::new();
 
     // Populate the left map
-    for subset in subset_generator(&left_indices, weight / 2) {
+    for subset in generate_subsets(&left_indices, weight / 2) {
         let mut candidate_error = vec![0; n];
         for &i in &subset {
             candidate_error[i] = 1;
@@ -53,7 +53,7 @@ pub fn sterns_algorithm(received_vector: &[u8], h: &Array2<u8>, weight: usize) -
     }
 
     // Populate the right map
-    for subset in subset_generator(&right_indices, weight / 2) {
+    for subset in generate_subsets(&right_indices, weight / 2) {
         let mut candidate_error = vec![0; n];
         for &i in &subset {
             candidate_error[i] = 1;

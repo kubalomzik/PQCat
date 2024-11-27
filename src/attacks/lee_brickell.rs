@@ -1,6 +1,6 @@
 use crate::utils::{
     apply_errors, calculate_syndrome, generate_random_code, generate_random_error_vector,
-    subset_generator,
+    generate_subsets,
 };
 use ndarray::Array2;
 use rand::seq::SliceRandom;
@@ -53,7 +53,7 @@ pub fn lee_brickell_algorithm(
 
     // Generate subsets of weight `t` for both halves and store their syndromes
     // Left half subsets
-    for subset in subset_generator(&left_indices, t) {
+    for subset in generate_subsets(&left_indices, t) {
         let mut candidate_error = vec![0; n];
         for &i in &subset {
             candidate_error[i] = 1;
@@ -63,7 +63,7 @@ pub fn lee_brickell_algorithm(
     }
 
     // Right half subsets
-    for subset in subset_generator(&right_indices, t) {
+    for subset in generate_subsets(&right_indices, t) {
         let mut candidate_error = vec![0; n];
         for &i in &subset {
             candidate_error[i] = 1;

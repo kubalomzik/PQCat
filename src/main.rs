@@ -17,6 +17,7 @@ struct Cli {
 #[derive(Subcommand)]
 enum Commands {
     Prange {
+        // fails to decode with these values
         #[arg(short, long, default_value_t = 6)]
         n: usize, // Codeword length (number of bits)
         #[arg(short, long, default_value_t = 3)]
@@ -41,6 +42,7 @@ enum Commands {
         w: usize,
     },
     BallCollision {
+        // fails to decode with these values
         #[arg(short, long, default_value_t = 6)]
         n: usize,
         #[arg(short, long, default_value_t = 3)]
@@ -49,6 +51,7 @@ enum Commands {
         w: usize,
     },
     Mmt {
+        // fails to decode with these values
         #[arg(short, long, default_value_t = 6)]
         n: usize,
         #[arg(short, long, default_value_t = 3)]
