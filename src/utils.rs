@@ -70,3 +70,20 @@ pub fn calculate_syndrome(vector: &[u8], h: &Array2<u8>) -> Vec<u8> {
     let result = h.dot(&vec).mapv(|x| x % 2); // Element-wise modulo operation
     result.to_vec()
 }
+
+pub fn subset_generator(indices: &[usize], subset_size: usize) -> Vec<Vec<usize>> {
+    let mut results = vec![];
+    let mut stack = vec![(0, vec![])];
+    while let Some((start, mut current_subset)) = stack.pop() {
+        if current_subset.len() == subset_size {
+            results.push(current_subset);
+        } else {
+            for i in start..indices.len() {
+                current_subset.push(indices[i]);
+                stack.push((i + 1, current_subset.clone())); // clone the modified subset
+                current_subset.pop(); // revert to previous state
+            }
+        }
+    }
+    results
+}
