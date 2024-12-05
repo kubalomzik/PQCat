@@ -2,7 +2,8 @@ use ndarray::{Array1, Array2};
 
 use crate::codes::generate_code;
 use crate::utils::{
-    calculate_weight, column_match, compute_h_tilde, extract_q_i, generate_random_syndrome, validate_syndrome
+    calculate_weight, column_match, compute_h_tilde, extract_q_i, generate_random_syndrome,
+    validate_syndrome,
 };
 
 pub fn run(n: usize, k: usize, w: usize, code_type: String, p: usize, ell1: usize, ell2: usize) {

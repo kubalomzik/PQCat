@@ -2,9 +2,7 @@ use std::collections::HashSet;
 
 use itertools::Itertools;
 use ndarray::{Array1, Array2};
-use rand::prelude::IteratorRandom;
 use rand::seq::SliceRandom;
-use rand::thread_rng;
 
 pub fn generate_random_error_vector(n: usize, weight: usize) -> Vec<u8> {
     assert!(
@@ -48,16 +46,21 @@ pub fn calculate_syndrome(error_vector: &[u8], h: &Array2<u8>) -> Vec<u8> {
     let syndrome: Vec<u8> = h
         .outer_iter()
         .map(|row| {
-            let row_vec: Vec<u8> = row.to_owned().to_vec();  // Convert row to Vec<u8>
-            row_vec.iter().zip(error_vector.iter())
+            let row_vec: Vec<u8> = row.to_owned().to_vec(); // Convert row to Vec<u8>
+            row_vec
+                .iter()
+                .zip(error_vector.iter())
                 .map(|(r, e)| r & e) // Perform element-wise dot product (mod 2)
-                .fold(0, |acc, x| acc ^ x)  // XOR all elements to get the syndrome
+                .fold(0, |acc, x| acc ^ x) // XOR all elements to get the syndrome
         })
         .collect();
     syndrome
 }
 
-pub fn generate_subsets<'a>(indices: &'a [usize], size: usize) -> impl Iterator<Item = Vec<usize>> + 'a {
+pub fn generate_subsets<'a>(
+    indices: &'a [usize],
+    size: usize,
+) -> impl Iterator<Item = Vec<usize>> + 'a {
     indices.iter().cloned().combinations(size)
 }
 
@@ -91,7 +94,13 @@ pub fn column_match(
         }
 
         // Check if the weight of the sum matches `l`
-        if column_sum.iter().map(|&x: &u8| x as usize).filter(|&x| x == 1).count() == l {
+        if column_sum
+            .iter()
+            .map(|&x: &u8| x as usize)
+            .filter(|&x| x == 1)
+            .count()
+            == l
+        {
             solutions.push(subset.into_iter().collect::<HashSet<usize>>());
         }
     }
