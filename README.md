@@ -9,6 +9,7 @@ PQCat (Post-Quantum Cryptography Classical Attack Tool) is a Rust-based framewor
 - **May-Meurer-Thomae (MMT) Algorithm**
 
 The tool allows users to experiment with parameters, visualize results, and analyze performance characteristics such as execution time and decoding success.
+In its current state it's able to handle random linear codes, Hamming and Goppa codes. Specific input values for these codes can be provided as parameters.
 
 ## Setup
 
@@ -37,4 +38,4 @@ The tool allows users to experiment with parameters, visualize results, and anal
 
     For example:
 
-   ```pqcat stern --n 6 --k 3 --w 2```
+   ```pqcat stern --n 7 --k 4 --w 1 --code_type hamming```
