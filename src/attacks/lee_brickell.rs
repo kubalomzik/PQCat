@@ -1,41 +1,46 @@
+use crate::codes::generate_code;
 use crate::utils::{
-    apply_errors, calculate_syndrome, generate_random_code, generate_random_error_vector,
-    generate_subsets,
+    apply_errors, calculate_syndrome, generate_random_error_vector, generate_subsets,
 };
 use ndarray::Array2;
 use rand::seq::SliceRandom;
 use std::collections::HashMap;
 
-pub fn run(n: usize, k: usize, w: usize) {
-    let (g, h) = generate_random_code(n, k); // Generator matrix G and parity-check matrix H
+pub fn run(n: usize, k: usize, w: usize, code_type: String) {
+    let (g, h) = generate_code(n, k, w, code_type);
 
-    let error_vector = generate_random_error_vector(n, w); // Generate a random error vector of weight w
-    let received_vector = apply_errors(&g.row(0).to_vec(), &error_vector); // Apply errors to a valid codeword
+    let error_vector = generate_random_error_vector(n, w);
+    let received_vector = apply_errors(&g.row(0).to_vec(), &error_vector);
 
     println!("Original Error Vector: {:?}", error_vector);
-    println!("Received Vector: {:?}", received_vector);
+    println!("Received Vector:       {:?}", received_vector);
 
-    if let Some(decoded_error) = lee_brickell_algorithm(&received_vector, &h, w) {
-        println!("Decoded Error Vector: {:?}", decoded_error);
+    if let Some(decoded_error) = lee_brickell_algorithm(&received_vector, &h, n, w) {
+        println!("Decoded Error Vector:  {:?}", decoded_error);
+        println!("Result: success");
     } else {
-        println!("Failed to decode!");
+        println!("Result: failure");
     }
 }
 
 pub fn lee_brickell_algorithm(
     received_vector: &[u8],
     h: &Array2<u8>,
+    n: usize,
     weight: usize,
 ) -> Option<Vec<u8>> {
-    let n = h.shape()[1];
-    let m = n / 2;
-    let t = weight / 2; // Number of errors to correct per half
+    let m = n / 2 + (n % 2);
 
-    // Edge case check
+    /*
+    This algorithm, unlike Stern's or Prange's, generally requires the weight to be even.
+    However, for maximum compatiblity with provided values this check is omitted.
+    Consider always providing even weights to ensure proper use of this algorithm.
+
     if weight % 2 != 0 {
         println!("Weight must be even for Lee-Brickell algorithm.");
         return None;
     }
+    */
 
     // Split indices into left and right halves
     let indices: Vec<usize> = (0..n).collect();
@@ -51,9 +56,10 @@ pub fn lee_brickell_algorithm(
     let mut left_map: HashMap<Vec<u8>, Vec<usize>> = HashMap::new();
     let mut right_map: HashMap<Vec<u8>, Vec<usize>> = HashMap::new();
 
-    // Generate subsets of weight `t` for both halves and store their syndromes
+    // Generate subsets for both halves and store their syndromes
     // Left half subsets
-    for subset in generate_subsets(&left_indices, t) {
+    let left_weight = weight / 2;
+    for subset in generate_subsets(&left_indices, left_weight) {
         let mut candidate_error = vec![0; n];
         for &i in &subset {
             candidate_error[i] = 1;
@@ -63,7 +69,8 @@ pub fn lee_brickell_algorithm(
     }
 
     // Right half subsets
-    for subset in generate_subsets(&right_indices, t) {
+    let right_weight = weight - left_weight;
+    for subset in generate_subsets(&right_indices, right_weight) {
         let mut candidate_error = vec![0; n];
         for &i in &subset {
             candidate_error[i] = 1;
