@@ -123,19 +123,6 @@ pub fn calculate_weight(vec: &[u8]) -> usize {
     vec.iter().filter(|&&bit| bit == 1).count()
 }
 
-pub fn support_subset(q_i: &Array2<u8>) -> Vec<usize> {
-    let mut support = Vec::new();
-    let cols = q_i.shape()[1];
-
-    for col in 0..cols {
-        if q_i.column(col).iter().any(|&x| x == 1) {
-            support.push(col);
-        }
-    }
-
-    support
-}
-
 pub fn validate_syndrome(e: &[u8], s: &Array1<u8>, h: &Array2<u8>) -> bool {
     let syndrome = h.dot(&Array1::from(e.to_vec()));
     syndrome.iter().zip(s.iter()).all(|(a, b)| a == b)
