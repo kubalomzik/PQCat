@@ -1,6 +1,4 @@
 use clap::{Parser, Subcommand};
-use std::time::Instant;
-
 mod attacks;
 mod codes;
 mod utils;
@@ -81,33 +79,41 @@ enum Commands {
     },
 }
 
+fn run_algorithm(
+    n: usize,
+    k: usize,
+    w: usize,
+    code_type: String,
+    algorithm_name: &str,
+    p: Option<usize>,
+    l1: Option<usize>,
+    l2: Option<usize>,
+) {
+    match algorithm_name {
+        "prange" => prange::run(n, k, w, code_type),
+        "stern" => stern::run(n, k, w, code_type),
+        "lee_brickell" => lee_brickell::run(n, k, w, code_type),
+        "ball_collision" => ball_collision::run(n, k, w, code_type),
+        "mmt" => mmt::run(n, k, w, code_type, p.unwrap(), l1.unwrap(), l2.unwrap()),
+        _ => return,
+    }
+}
+
 fn main() {
     let cli = Cli::parse();
 
     match cli.command {
         Commands::Prange { n, k, w, code_type } => {
-            let start = Instant::now();
-            prange::run(n, k, w, code_type);
-            let duration = start.elapsed();
-            println!("Time {:?}", duration);
+            run_algorithm(n, k, w, code_type, "prange", None, None, None);
         }
         Commands::Stern { n, k, w, code_type } => {
-            let start = Instant::now();
-            stern::run(n, k, w, code_type);
-            let duration = start.elapsed();
-            println!("Time: {:?}", duration);
+            run_algorithm(n, k, w, code_type, "stern", None, None, None);
         }
         Commands::LeeBrickell { n, k, w, code_type } => {
-            let start = Instant::now();
-            lee_brickell::run(n, k, w, code_type);
-            let duration = start.elapsed();
-            println!("Time: {:?}", duration);
+            run_algorithm(n, k, w, code_type, "lee_brickell", None, None, None);
         }
         Commands::BallCollision { n, k, w, code_type } => {
-            let start = Instant::now();
-            ball_collision::run(n, k, w, code_type);
-            let duration = start.elapsed();
-            println!("Time: {:?}", duration);
+            run_algorithm(n, k, w, code_type, "ball_collision", None, None, None);
         }
         Commands::Mmt {
             n,
@@ -118,10 +124,16 @@ fn main() {
             l1,
             l2,
         } => {
-            let start = Instant::now();
-            mmt::run(n, k, w, code_type, p, l1, l2);
-            let duration = start.elapsed();
-            println!("Time: {:?}", duration);
+            run_algorithm(
+                n,
+                k,
+                w,
+                code_type,
+                "ball_collision",
+                Some(p),
+                Some(l1),
+                Some(l2),
+            );
         }
     }
 }

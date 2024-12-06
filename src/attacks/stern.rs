@@ -5,6 +5,7 @@ use crate::utils::{
 use ndarray::Array2;
 use rand::seq::SliceRandom;
 use std::collections::HashMap;
+use std::time::Instant;
 
 pub fn run(n: usize, k: usize, w: usize, code_type: String) {
     let (g, h) = generate_code(n, k, w, code_type);
@@ -24,6 +25,8 @@ pub fn run(n: usize, k: usize, w: usize, code_type: String) {
 }
 
 pub fn sterns_algorithm(received_vector: &[u8], h: &Array2<u8>, weight: usize) -> Option<Vec<u8>> {
+    let start = Instant::now();
+
     let n = h.shape()[1];
     let m = n / 2 + (n % 2);
 
@@ -80,9 +83,14 @@ pub fn sterns_algorithm(received_vector: &[u8], h: &Array2<u8>, weight: usize) -
             for &i in right_subset {
                 error_vector[i] = 1;
             }
+            let duration = start.elapsed().as_nanos();
+            println!("Time: {} ns", duration);
             return Some(error_vector);
         }
     }
+
+    let duration = start.elapsed().as_nanos();
+    println!("Time: {} ns", duration);
 
     None
 }
