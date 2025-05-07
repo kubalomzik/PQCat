@@ -38,4 +38,4 @@ In its current state it's able to handle random linear codes, Hamming and Goppa 
 
     For example:
 
-   ```pqcat stern --n 7 --k 4 --w 1 --code_type hamming```
+   ```pqcat stern --n 7 --k 4 --w 1 --code-type hamming```

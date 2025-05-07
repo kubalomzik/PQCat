@@ -1,27 +1,10 @@
-use crate::codes::generate_code;
-use crate::utils::{apply_errors, calculate_syndrome, generate_random_error_vector};
+use crate::attacks::attack_utils::calculate_syndrome;
 use ndarray::Array2;
 use rand::{seq::SliceRandom, thread_rng};
 use std::collections::HashMap;
 use std::time::Instant;
 
-pub fn run(n: usize, k: usize, w: usize, code_type: String) {
-    let (g, h) = generate_code(n, k, w, code_type);
-
-    let error_vector = generate_random_error_vector(n, w); // Generate a random error vector of weight w
-    let received_vector = apply_errors(&g.row(0).to_vec(), &error_vector); // Apply errors to a valid codeword
-
-    println!("Original Error Vector: {:?}", error_vector);
-    println!("Received Vector:       {:?}", received_vector);
-
-    if let Some(decoded_error) = ball_collision_algorithm(&received_vector, &h, n, w) {
-        println!("Decoded Error Vector:  {:?}", decoded_error);
-    } else {
-        println!("Failed to decode!");
-    }
-}
-
-pub fn ball_collision_algorithm(
+pub fn run_ball_collision_algorithm(
     received_vector: &[u8],
     h: &Array2<u8>,
     n: usize,

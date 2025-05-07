@@ -1,30 +1,10 @@
-use crate::codes::generate_code;
-use crate::utils::{
-    apply_errors, calculate_syndrome, generate_random_error_vector, generate_subsets,
-};
+use crate::attacks::attack_utils::{calculate_syndrome, generate_subsets};
 use ndarray::Array2;
 use rand::seq::SliceRandom;
 use std::collections::HashMap;
 use std::time::Instant;
 
-pub fn run(n: usize, k: usize, w: usize, code_type: String) {
-    let (g, h) = generate_code(n, k, w, code_type);
-
-    let error_vector = generate_random_error_vector(n, w);
-    let received_vector = apply_errors(&g.row(0).to_vec(), &error_vector);
-
-    println!("Original Error Vector: {:?}", error_vector);
-    println!("Received Vector:       {:?}", received_vector);
-
-    if let Some(decoded_error) = lee_brickell_algorithm(&received_vector, &h, n, w) {
-        println!("Decoded Error Vector:  {:?}", decoded_error);
-        println!("Result: success");
-    } else {
-        println!("Result: failure");
-    }
-}
-
-pub fn lee_brickell_algorithm(
+pub fn run_lee_brickell_algorithm(
     received_vector: &[u8],
     h: &Array2<u8>,
     n: usize,

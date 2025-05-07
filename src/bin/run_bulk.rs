@@ -34,7 +34,7 @@ fn main() {
     let mut writer = Writer::from_writer(file);
 
     writer
-        .write_record(&["Run", "Time (ns)", "Result"])
+        .write_record(["Run", "Time (ns)", "Result"])
         .expect("Failed to write CSV headers");
 
     for run in 1..=runs {
