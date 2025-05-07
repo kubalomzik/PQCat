@@ -1,5 +1,5 @@
 use itertools::Itertools;
-use ndarray::{Array1, Array2};
+use ndarray::Array2;
 use rand::seq::SliceRandom;
 
 pub fn generate_random_error_vector(n: usize, weight: usize) -> Vec<u8> {
@@ -42,13 +42,4 @@ pub fn calculate_syndrome(error_vector: &[u8], h: &Array2<u8>) -> Vec<u8> {
 
 pub fn generate_subsets(indices: &[usize], size: usize) -> impl Iterator<Item = Vec<usize>> + '_ {
     indices.iter().cloned().combinations(size)
-}
-
-pub fn calculate_weight(vec: &[u8]) -> usize {
-    vec.iter().filter(|&&bit| bit == 1).count()
-}
-
-pub fn validate_syndrome(e: &[u8], s: &Array1<u8>, h: &Array2<u8>) -> bool {
-    let syndrome = h.dot(&Array1::from(e.to_vec()));
-    syndrome.iter().zip(s.iter()).all(|(a, b)| a == b)
 }

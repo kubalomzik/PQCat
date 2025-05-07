@@ -27,13 +27,8 @@ pub fn run_algorithm(
              */
             if let Some(params) = &partition_params {
                 let p = params.p.unwrap_or(2);
-                let l1 = params.l1.unwrap_or(1);
-                let l2 = params.l2.unwrap_or(1);
-
-                assert!(
-                    l1 + l2 == code_params.w,
-                    "Sum of l1 and l2 must be equal to weight"
-                );
+                let l1 = params.l1.unwrap_or(256);
+                let l2 = params.l2.unwrap_or(256);
                 let s_vec = calculate_syndrome(&original_error, &h);
                 let s_array = ndarray::Array1::from_vec(s_vec);
                 mmt::run_mmt_algorithm(&h, &s_array, code_params.n, code_params.w, p, l1, l2)
@@ -45,7 +40,7 @@ pub fn run_algorithm(
         _ => {
             let received_vector = apply_errors(&g.row(0).to_vec(), &original_error); // Apply errors to a valid codeword
 
-            println!("Received Vector: {:?}", received_vector);
+            println!("Received Vector:       {:?}", received_vector);
 
             match algorithm_name {
                 "prange" => prange::run_prange_algorithm(&received_vector, &h, code_params.w),

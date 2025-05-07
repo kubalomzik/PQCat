@@ -19,9 +19,9 @@ struct Cli {
 #[derive(Subcommand)]
 enum Commands {
     Prange {
-        #[arg(short, long, default_value_t = 7)]
+        #[arg(short, long, default_value_t = 15)]
         n: usize, // Codeword length (number of bits)
-        #[arg(short, long, default_value_t = 4)]
+        #[arg(short, long, default_value_t = 11)]
         k: usize, // Message length (number of bits)
         #[arg(short, long, default_value_t = 1)]
         w: usize, // Weight of the error vector (number of errors)
@@ -29,9 +29,9 @@ enum Commands {
         code_type: String, // Type of code: "random", "hamming", or "goppa"
     },
     Stern {
-        #[arg(short, long, default_value_t = 7)]
+        #[arg(short, long, default_value_t = 15)]
         n: usize,
-        #[arg(short, long, default_value_t = 4)]
+        #[arg(short, long, default_value_t = 11)]
         k: usize,
         #[arg(short, long, default_value_t = 1)]
         w: usize,
@@ -39,45 +39,40 @@ enum Commands {
         code_type: String,
     },
     LeeBrickell {
-        #[arg(short, long, default_value_t = 7)]
+        #[arg(short, long, default_value_t = 23)]
         n: usize,
-        #[arg(short, long, default_value_t = 4)]
+        #[arg(short, long, default_value_t = 12)]
         k: usize,
-        #[arg(short, long, default_value_t = 1)]
+        #[arg(short, long, default_value_t = 3)]
         w: usize,
-        #[arg(short, long, default_value = "hamming")]
+        #[arg(short, long, default_value = "random")]
         code_type: String,
     },
     BallCollision {
-        #[arg(short, long, default_value_t = 7)]
+        #[arg(short, long, default_value_t = 23)]
         n: usize,
-        #[arg(short, long, default_value_t = 4)]
+        #[arg(short, long, default_value_t = 12)]
         k: usize,
-        #[arg(short, long, default_value_t = 1)]
+        #[arg(short, long, default_value_t = 3)]
         w: usize,
-        #[arg(short, long, default_value = "hamming")]
+        #[arg(short, long, default_value = "random")]
         code_type: String,
     },
     Mmt {
         // fails to decode with these values
-        #[arg(short, long, default_value_t = 7)]
+        #[arg(short, long, default_value_t = 31)]
         n: usize,
-        #[arg(short, long, default_value_t = 4)]
+        #[arg(short, long, default_value_t = 15)]
         k: usize,
-        #[arg(short, long, default_value_t = 1)]
+        #[arg(short, long, default_value_t = 4)]
         w: usize,
-        #[arg(short, long, default_value = "hamming")]
+        #[arg(short, long, default_value = "random")]
         code_type: String,
-        /*
-        Parameter p (partitions) ~= log_2(n)
-        - Smaller p reduces computational cost but may miss solutions
-        - Larger p increases accuracy but grows computational cost exponentially
-        */
         #[arg(short, long, default_value_t = 2)]
         p: usize,
-        #[arg(long, default_value_t = 2)]
+        #[arg(long, default_value_t = 256)]
         l1: usize, // Error split 1
-        #[arg(long, default_value_t = 2)]
+        #[arg(long, default_value_t = 256)]
         l2: usize, // Error split 2
     },
 }
