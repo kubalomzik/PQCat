@@ -1,9 +1,12 @@
 use clap::{Parser, Subcommand};
+mod algorithm_runner;
 mod attacks;
+mod code_generator;
 mod codes;
-mod utils;
+mod types;
 
-use attacks::{ball_collision, lee_brickell, mmt, prange, stern};
+use algorithm_runner::run_algorithm;
+use types::{CodeParams, PartitionParams};
 
 #[derive(Parser)]
 #[command(name = "pqcat")]
@@ -16,9 +19,9 @@ struct Cli {
 #[derive(Subcommand)]
 enum Commands {
     Prange {
-        #[arg(short, long, default_value_t = 7)]
+        #[arg(short, long, default_value_t = 15)]
         n: usize, // Codeword length (number of bits)
-        #[arg(short, long, default_value_t = 4)]
+        #[arg(short, long, default_value_t = 11)]
         k: usize, // Message length (number of bits)
         #[arg(short, long, default_value_t = 1)]
         w: usize, // Weight of the error vector (number of errors)
@@ -26,9 +29,9 @@ enum Commands {
         code_type: String, // Type of code: "random", "hamming", or "goppa"
     },
     Stern {
-        #[arg(short, long, default_value_t = 7)]
+        #[arg(short, long, default_value_t = 15)]
         n: usize,
-        #[arg(short, long, default_value_t = 4)]
+        #[arg(short, long, default_value_t = 11)]
         k: usize,
         #[arg(short, long, default_value_t = 1)]
         w: usize,
@@ -36,67 +39,42 @@ enum Commands {
         code_type: String,
     },
     LeeBrickell {
-        #[arg(short, long, default_value_t = 7)]
+        #[arg(short, long, default_value_t = 23)]
         n: usize,
-        #[arg(short, long, default_value_t = 4)]
+        #[arg(short, long, default_value_t = 12)]
         k: usize,
-        #[arg(short, long, default_value_t = 1)]
+        #[arg(short, long, default_value_t = 3)]
         w: usize,
-        #[arg(short, long, default_value = "hamming")]
+        #[arg(short, long, default_value = "random")]
         code_type: String,
     },
     BallCollision {
-        #[arg(short, long, default_value_t = 7)]
+        #[arg(short, long, default_value_t = 23)]
         n: usize,
-        #[arg(short, long, default_value_t = 4)]
+        #[arg(short, long, default_value_t = 12)]
         k: usize,
-        #[arg(short, long, default_value_t = 1)]
+        #[arg(short, long, default_value_t = 3)]
         w: usize,
-        #[arg(short, long, default_value = "hamming")]
+        #[arg(short, long, default_value = "random")]
         code_type: String,
     },
     Mmt {
         // fails to decode with these values
-        #[arg(short, long, default_value_t = 7)]
+        #[arg(short, long, default_value_t = 31)]
         n: usize,
-        #[arg(short, long, default_value_t = 4)]
+        #[arg(short, long, default_value_t = 15)]
         k: usize,
-        #[arg(short, long, default_value_t = 1)]
+        #[arg(short, long, default_value_t = 4)]
         w: usize,
-        #[arg(short, long, default_value = "hamming")]
+        #[arg(short, long, default_value = "random")]
         code_type: String,
-        /*
-        Parameter p (partitions) ~= log_2(n)
-        - Smaller p reduces computational cost but may miss solutions
-        - Larger p increases accuracy but grows computational cost exponentially
-        */
         #[arg(short, long, default_value_t = 2)]
         p: usize,
-        #[arg(long, default_value_t = 2)]
+        #[arg(long, default_value_t = 256)]
         l1: usize, // Error split 1
-        #[arg(long, default_value_t = 2)]
+        #[arg(long, default_value_t = 256)]
         l2: usize, // Error split 2
     },
-}
-
-fn run_algorithm(
-    n: usize,
-    k: usize,
-    w: usize,
-    code_type: String,
-    algorithm_name: &str,
-    p: Option<usize>,
-    l1: Option<usize>,
-    l2: Option<usize>,
-) {
-    match algorithm_name {
-        "prange" => prange::run(n, k, w, code_type),
-        "stern" => stern::run(n, k, w, code_type),
-        "lee_brickell" => lee_brickell::run(n, k, w, code_type),
-        "ball_collision" => ball_collision::run(n, k, w, code_type),
-        "mmt" => mmt::run(n, k, w, code_type, p.unwrap(), l1.unwrap(), l2.unwrap()),
-        _ => return,
-    }
 }
 
 fn main() {
@@ -104,16 +82,20 @@ fn main() {
 
     match cli.command {
         Commands::Prange { n, k, w, code_type } => {
-            run_algorithm(n, k, w, code_type, "prange", None, None, None);
+            let code_params = CodeParams { n, k, w, code_type };
+            run_algorithm("prange", code_params, None);
         }
         Commands::Stern { n, k, w, code_type } => {
-            run_algorithm(n, k, w, code_type, "stern", None, None, None);
+            let code_params = CodeParams { n, k, w, code_type };
+            run_algorithm("stern", code_params, None);
         }
         Commands::LeeBrickell { n, k, w, code_type } => {
-            run_algorithm(n, k, w, code_type, "lee_brickell", None, None, None);
+            let code_params = CodeParams { n, k, w, code_type };
+            run_algorithm("lee_brickell", code_params, None);
         }
         Commands::BallCollision { n, k, w, code_type } => {
-            run_algorithm(n, k, w, code_type, "ball_collision", None, None, None);
+            let code_params = CodeParams { n, k, w, code_type };
+            run_algorithm("ball_collision", code_params, None);
         }
         Commands::Mmt {
             n,
@@ -124,16 +106,13 @@ fn main() {
             l1,
             l2,
         } => {
-            run_algorithm(
-                n,
-                k,
-                w,
-                code_type,
-                "ball_collision",
-                Some(p),
-                Some(l1),
-                Some(l2),
-            );
+            let code_params = CodeParams { n, k, w, code_type };
+            let partition_params = PartitionParams {
+                p: Some(p),
+                l1: Some(l1),
+                l2: Some(l2),
+            };
+            run_algorithm("mmt", code_params, Some(partition_params));
         }
     }
 }

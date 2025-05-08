@@ -1,30 +1,14 @@
-use crate::codes::generate_code;
-use crate::utils::{
-    apply_errors, calculate_syndrome, generate_random_error_vector, generate_subsets,
-};
+use crate::attacks::attack_utils::{calculate_syndrome, generate_subsets};
 use ndarray::Array2;
 use rand::seq::SliceRandom;
 use std::collections::HashMap;
 use std::time::Instant;
 
-pub fn run(n: usize, k: usize, w: usize, code_type: String) {
-    let (g, h) = generate_code(n, k, w, code_type);
-
-    let error_vector = generate_random_error_vector(n, w); // Generate a random error vector of weight w
-    let received_vector = apply_errors(&g.row(0).to_vec(), &error_vector); // Apply errors to a valid codeword
-
-    println!("Original Error Vector: {:?}", error_vector);
-    println!("Received Vector:       {:?}", received_vector);
-
-    if let Some(decoded_error) = sterns_algorithm(&received_vector, &h, w) {
-        println!("Decoded Error Vector:  {:?}", decoded_error);
-        println!("Result: success");
-    } else {
-        println!("Result: failure");
-    }
-}
-
-pub fn sterns_algorithm(received_vector: &[u8], h: &Array2<u8>, weight: usize) -> Option<Vec<u8>> {
+pub fn run_stern_algorithm(
+    received_vector: &[u8],
+    h: &Array2<u8>,
+    weight: usize,
+) -> Option<Vec<u8>> {
     let start = Instant::now();
 
     let n = h.shape()[1];
@@ -83,14 +67,14 @@ pub fn sterns_algorithm(received_vector: &[u8], h: &Array2<u8>, weight: usize) -
             for &i in right_subset {
                 error_vector[i] = 1;
             }
-            let duration = start.elapsed().as_nanos();
-            println!("Time: {} ns", duration);
+            let duration = start.elapsed().as_micros();
+            println!("Time: {} μs", duration);
             return Some(error_vector);
         }
     }
 
-    let duration = start.elapsed().as_nanos();
-    println!("Time: {} ns", duration);
+    let duration = start.elapsed().as_micros();
+    println!("Time: {} μs", duration);
 
     None
 }

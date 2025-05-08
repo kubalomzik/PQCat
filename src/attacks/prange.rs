@@ -1,27 +1,13 @@
-use crate::codes::generate_code;
-use crate::utils::{apply_errors, calculate_syndrome, generate_random_error_vector};
+use crate::attacks::attack_utils::calculate_syndrome;
 use ndarray::Array2;
 use rand::seq::SliceRandom;
 use std::time::Instant;
 
-pub fn run(n: usize, k: usize, w: usize, code_type: String) {
-    let (g, h) = generate_code(n, k, w, code_type);
-
-    let error_vector = generate_random_error_vector(n, w); // Generate a random error vector of weight w
-    let received_vector = apply_errors(&g.row(0).to_vec(), &error_vector); // Apply errors to a valid codeword
-
-    println!("Original Error Vector: {:?}", error_vector);
-    println!("Received Vector:       {:?}", received_vector);
-
-    if let Some(decoded_error) = prange_algorithm(&received_vector, &h, w) {
-        println!("Decoded Error Vector:  {:?}", decoded_error);
-        println!("Result: success");
-    } else {
-        println!("Result: failure");
-    }
-}
-
-pub fn prange_algorithm(received_vector: &[u8], h: &Array2<u8>, weight: usize) -> Option<Vec<u8>> {
+pub fn run_prange_algorithm(
+    received_vector: &[u8],
+    h: &Array2<u8>,
+    weight: usize,
+) -> Option<Vec<u8>> {
     let start = Instant::now();
 
     let n = h.shape()[1]; // Length of the error vector
@@ -46,15 +32,15 @@ pub fn prange_algorithm(received_vector: &[u8], h: &Array2<u8>, weight: usize) -
 
         // If the syndrome matches (i.e., it is zero), we found a valid error vector
         if candidate_syndrome == received_syndrome {
-            let duration = start.elapsed().as_nanos();
-            println!("Time: {} ns", duration);
+            let duration = start.elapsed().as_micros();
+            println!("Time: {} μs", duration);
             return Some(candidate_error);
         }
         loop_count += 1;
     }
 
-    let duration = start.elapsed().as_nanos();
-    println!("Time: {} ns", duration);
+    let duration = start.elapsed().as_micros();
+    println!("Time: {} μs", duration);
 
     None
 }

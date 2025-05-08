@@ -5,7 +5,7 @@ use std::process::Command;
 use sysinfo::System;
 
 fn extract_time(output: &str) -> Option<u64> {
-    let re = Regex::new(r"Time:\s*(\d+)\s*ns").unwrap();
+    let re = Regex::new(r"Time:\s*(\d+)\s*μs").unwrap();
 
     if let Some(captures) = re.captures(output) {
         if let Some(time_str) = captures.get(1) {
@@ -34,7 +34,7 @@ fn main() {
     let mut writer = Writer::from_writer(file);
 
     writer
-        .write_record(&["Run", "Time (ns)", "Result"])
+        .write_record(["Run", "Time (ns)", "Result"])
         .expect("Failed to write CSV headers");
 
     for run in 1..=runs {
