@@ -1,7 +1,7 @@
 use crate::attacks::attack_utils::{
     apply_errors, calculate_syndrome, generate_random_error_vector,
 };
-use crate::attacks::{ball_collision, lee_brickell, mmt, prange, stern};
+use crate::attacks::{ball_collision, bjmm, lee_brickell, mmt, prange, stern};
 use crate::code_generator::generate_code;
 use crate::types::{CodeParams, PartitionParams};
 
@@ -57,6 +57,9 @@ pub fn run_algorithm(
                     code_params.n,
                     code_params.w,
                 ),
+                "bjmm" => {
+                    bjmm::run_bjmm_algorithm(&received_vector, &h, code_params.n, code_params.w)
+                }
                 _ => None,
             }
         }

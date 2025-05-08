@@ -43,3 +43,16 @@ pub fn calculate_syndrome(error_vector: &[u8], h: &Array2<u8>) -> Vec<u8> {
 pub fn generate_subsets(indices: &[usize], size: usize) -> impl Iterator<Item = Vec<usize>> + '_ {
     indices.iter().cloned().combinations(size)
 }
+
+/// Calculate syndrome contribution from a subset of columns
+pub fn calculate_partial_syndrome(h: &Array2<u8>, indices: &[usize], r: usize) -> Vec<u8> {
+    let mut syndrome = vec![0; r];
+
+    for &idx in indices {
+        for j in 0..r {
+            syndrome[j] ^= h[[j, idx]];
+        }
+    }
+
+    syndrome
+}

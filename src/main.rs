@@ -59,7 +59,6 @@ enum Commands {
         code_type: String,
     },
     Mmt {
-        // fails to decode with these values
         #[arg(short, long, default_value_t = 31)]
         n: usize,
         #[arg(short, long, default_value_t = 15)]
@@ -74,6 +73,16 @@ enum Commands {
         l1: usize, // Error split 1
         #[arg(long, default_value_t = 256)]
         l2: usize, // Error split 2
+    },
+    Bjmm {
+        #[arg(short, long, default_value_t = 23)]
+        n: usize,
+        #[arg(short, long, default_value_t = 12)]
+        k: usize,
+        #[arg(short, long, default_value_t = 3)]
+        w: usize,
+        #[arg(short, long, default_value = "random")]
+        code_type: String,
     },
 }
 
@@ -113,6 +122,10 @@ fn main() {
                 l2: Some(l2),
             };
             run_algorithm("mmt", code_params, Some(partition_params));
+        }
+        Commands::Bjmm { n, k, w, code_type } => {
+            let code_params = CodeParams { n, k, w, code_type };
+            run_algorithm("bjmm", code_params, None);
         }
     }
 }
