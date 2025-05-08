@@ -154,8 +154,8 @@ pub fn run_mmt_algorithm(
                         }
 
                         if check_syndrome == syndrome_vec {
-                            let duration = start.elapsed().as_nanos();
-                            println!("Solution found in {} ns", duration);
+                            let duration = start.elapsed().as_micros();
+                            println!("Time: {} μs", duration);
                             return Some(error);
                         }
                     }
@@ -164,7 +164,7 @@ pub fn run_mmt_algorithm(
         }
     }
 
-    let duration = start.elapsed().as_nanos();
-    println!("No Time: {} ns", duration);
+    let duration = start.elapsed().as_micros();
+    println!("Time: {} μs", duration);
     None
 }

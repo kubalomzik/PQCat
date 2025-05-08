@@ -32,15 +32,15 @@ pub fn run_prange_algorithm(
 
         // If the syndrome matches (i.e., it is zero), we found a valid error vector
         if candidate_syndrome == received_syndrome {
-            let duration = start.elapsed().as_nanos();
-            println!("Time: {} ns", duration);
+            let duration = start.elapsed().as_micros();
+            println!("Time: {} μs", duration);
             return Some(candidate_error);
         }
         loop_count += 1;
     }
 
-    let duration = start.elapsed().as_nanos();
-    println!("Time: {} ns", duration);
+    let duration = start.elapsed().as_micros();
+    println!("Time: {} μs", duration);
 
     None
 }

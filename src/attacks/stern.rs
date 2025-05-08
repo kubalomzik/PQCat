@@ -67,14 +67,14 @@ pub fn run_stern_algorithm(
             for &i in right_subset {
                 error_vector[i] = 1;
             }
-            let duration = start.elapsed().as_nanos();
-            println!("Time: {} ns", duration);
+            let duration = start.elapsed().as_micros();
+            println!("Time: {} μs", duration);
             return Some(error_vector);
         }
     }
 
-    let duration = start.elapsed().as_nanos();
-    println!("Time: {} ns", duration);
+    let duration = start.elapsed().as_micros();
+    println!("Time: {} μs", duration);
 
     None
 }
