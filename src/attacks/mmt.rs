@@ -81,10 +81,7 @@ pub fn run_mmt_algorithm(
         }
 
         // Store in map
-        l1_map
-            .entry(partial_syndrome)
-            .or_insert_with(Vec::new)
-            .push(subset);
+        l1_map.entry(partial_syndrome).or_default().push(subset);
     }
 
     // Generate list L2 (combinations from second p/2 partitions)
@@ -113,10 +110,7 @@ pub fn run_mmt_algorithm(
         }
 
         // Store in map
-        l2_map
-            .entry(partial_syndrome)
-            .or_insert_with(Vec::new)
-            .push(subset);
+        l2_map.entry(partial_syndrome).or_default().push(subset);
     }
 
     // ===== PHASE 2: Search for a match =====
