@@ -2,37 +2,34 @@ use crate::codes::code_utils::convert_to_systematic;
 use crate::codes::goppa::{generate_goppa_parity_matrix, FiniteField};
 use ndarray::s;
 use ndarray::{Array2, Axis};
+use rand::seq::SliceRandom;
 use rand::Rng;
 use std::process;
 
-pub fn generate_code(n: usize, k: usize, w: usize, code_type: String) -> (Array2<u8>, Array2<u8>) {
-    let (g, h);
-    match code_type.as_str() {
-        "random" => {
-            (g, h) = generate_random_code(n, k);
-        }
-        "hamming" => {
-            (g, h) = generate_hamming_code(n, k);
-        }
-        "goppa" => {
-            // w is used as t in Goppa code
-            (g, h) = match generate_goppa_code(n, k, w) {
-                Ok(result) => result,
-                Err(e) => {
-                    eprintln!("Error generating Goppa code: {}", e);
-                    process::exit(1);
-                }
-            };
-        }
-        _ => {
-            println!("Error: Unsupported code type '{}'", code_type);
+fn handle_code_result<T>(result: Result<T, String>, code_type: &str) -> T {
+    match result {
+        Ok(value) => value,
+        Err(e) => {
+            eprintln!("Error generating {} code: {}", code_type, e);
             process::exit(1);
         }
     }
-    (g, h)
 }
 
-pub fn generate_random_code(n: usize, k: usize) -> (Array2<u8>, Array2<u8>) {
+pub fn generate_code(n: usize, k: usize, w: usize, code_type: String) -> (Array2<u8>, Array2<u8>) {
+    match code_type.as_str() {
+        "random" => handle_code_result(generate_random_code(n, k), "random"),
+        "hamming" => handle_code_result(generate_hamming_code(n, k), "hamming"),
+        "goppa" => handle_code_result(generate_goppa_code(n, k, w), "goppa"),
+        "qc" => handle_code_result(generate_qc_code(n, k), "qc"),
+        _ => {
+            eprintln!("Error: Unsupported code type '{}'", code_type);
+            process::exit(1);
+        }
+    }
+}
+
+pub fn generate_random_code(n: usize, k: usize) -> Result<(Array2<u8>, Array2<u8>), String> {
     assert!(k < n, "k must be less than n");
     let mut rng = rand::thread_rng();
     let m = n - k; // Number of parity bits
@@ -59,10 +56,10 @@ pub fn generate_random_code(n: usize, k: usize) -> (Array2<u8>, Array2<u8>) {
         }
     }
 
-    (g, h)
+    Ok((g, h))
 }
 
-pub fn generate_hamming_code(n: usize, k: usize) -> (Array2<u8>, Array2<u8>) {
+pub fn generate_hamming_code(n: usize, k: usize) -> Result<(Array2<u8>, Array2<u8>), String> {
     let m = n - k; // Number of parity bits
 
     let mut h = Array2::<u8>::zeros((m, n)); // Create parity-check matrix H (m x n)
@@ -85,7 +82,7 @@ pub fn generate_hamming_code(n: usize, k: usize) -> (Array2<u8>, Array2<u8>) {
     let identity_k = Array2::<u8>::eye(k); // Identity matrix (k x k)
     let g = ndarray::concatenate(Axis(1), &[identity_k.view(), p.view()]).unwrap(); // Concatenate I_k and P along columns
 
-    (g, systematic_h)
+    Ok((g, systematic_h))
 }
 
 pub fn generate_goppa_code(
@@ -142,6 +139,65 @@ pub fn generate_goppa_code(
     let h = generate_goppa_parity_matrix(n, t, &goppa_poly, &support, &field);
 
     let (g, h_systematic) = convert_to_systematic(h); // Convert H to systematic form and derive the generator matrix
+
+    Ok((g, h_systematic))
+}
+
+pub fn generate_qc_code(n: usize, k: usize) -> Result<(Array2<u8>, Array2<u8>), String> {
+    let r = n - k; // Number of parity bits
+
+    if n % r != 0 || k % r != 0 {
+        return Err(format!(
+            "Invalid QC code parameters: both n ({}) and k ({}) should be multiples of r ({})",
+            n, k, r
+        ));
+    }
+
+    let p = r; // Block size for circulant matrices (using r for simplicity)
+    let num_blocks_cols = n / p;
+    let num_blocks_rows = r / p;
+
+    if num_blocks_rows != 1 {
+        return Err(format!(
+            "For simplicity, this implementation requires r=p, got r={}, p={}",
+            r, p
+        ));
+    }
+
+    // Create the parity-check matrix composed of circulant blocks
+    let mut h = Array2::<u8>::zeros((r, n));
+
+    for block_col in 0..num_blocks_cols {
+        // For each block column, generate a random first row
+        let mut first_row = vec![0; p];
+
+        // Make it sparse for better error correction (typically 2-3 1s per row)
+        let ones_per_row = 2.min(p / 2);
+        let mut indices: Vec<usize> = (0..p).collect();
+        indices.shuffle(&mut rand::thread_rng());
+
+        for &idx in indices.iter().take(ones_per_row) {
+            first_row[idx] = 1;
+        }
+
+        // Fill the block with cyclic shifts of the first row
+        for row in 0..p {
+            for col in 0..p {
+                let shifted_col = (col + row) % p;
+                h[[row, block_col * p + col]] = first_row[shifted_col];
+            }
+        }
+    }
+
+    // Ensure the last block is invertible by making it the identity matrix
+    for i in 0..p {
+        for j in 0..p {
+            h[[i, (num_blocks_cols - 1) * p + j]] = if i == j { 1 } else { 0 };
+        }
+    }
+
+    // Convert to systematic form and derive generator matrix
+    let (g, h_systematic) = convert_to_systematic(h);
 
     Ok((g, h_systematic))
 }
