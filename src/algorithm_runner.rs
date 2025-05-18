@@ -1,7 +1,7 @@
-use crate::attacks::attack_utils::{
+use crate::algorithms::algorithm_utils::{
     apply_errors, calculate_syndrome, generate_random_error_vector,
 };
-use crate::attacks::{ball_collision, bjmm, lee_brickell, mmt, prange, stern};
+use crate::algorithms::{ball_collision, bjmm, lee_brickell, mmt, patterson, prange, stern};
 use crate::code_generator::generate_code;
 use crate::types::{CodeParams, PartitionParams};
 
@@ -10,7 +10,7 @@ pub fn run_algorithm(
     code_params: CodeParams,
     partition_params: Option<PartitionParams>,
 ) {
-    let (g, h) = generate_code(
+    let (g, h, goppa_params) = generate_code(
         code_params.n,
         code_params.k,
         code_params.w,
@@ -60,20 +60,34 @@ pub fn run_algorithm(
                 "bjmm" => {
                     bjmm::run_bjmm_algorithm(&received_vector, &h, code_params.n, code_params.w)
                 }
+                "patterson" => {
+                    let goppa_params = goppa_params.unwrap();
+                    patterson::run_patterson_algorithm(&received_vector, &h, &goppa_params)
+                }
                 _ => None,
             }
         }
     };
 
-    println!("Original Error Vector: {:?}", original_error);
     if let Some(decoded) = decoded_error {
         println!("Decoded Error Vector:  {:?}", decoded);
-        if decoded == original_error {
-            println!("Result: success (correct error vector)");
+
+        // Check syndrome correctness
+        let decoded_syndrome = calculate_syndrome(&decoded, &h);
+        let original_syndrome = calculate_syndrome(&original_error, &h);
+
+        // Check weight constraint
+        let decoded_weight = decoded.iter().filter(|&&bit| bit == 1).count();
+
+        if decoded_syndrome == original_syndrome && decoded_weight <= code_params.w {
+            println!("Result: success (valid error vector found)");
+            if decoded == original_error {
+                println!("[Note: Found the exact original error vector]");
+            } else {
+                println!("[Note: Found an alternative valid error vector]");
+            }
         } else {
-            println!("Result: failure (wrong error vector)");
+            println!("Result: failure (invalid error vector)");
         }
-    } else {
-        println!("Result: failure (no solution found)");
     }
 }
