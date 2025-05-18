@@ -1,5 +1,6 @@
 use crate::codes::code_utils::convert_to_systematic;
-use crate::codes::goppa::{generate_goppa_parity_matrix, FiniteField};
+use crate::codes::goppa::{generate_goppa_parity_matrix, generate_valid_goppa_params};
+use crate::types::GoppaParams;
 use ndarray::s;
 use ndarray::{Array2, Axis};
 use rand::seq::SliceRandom;
@@ -16,12 +17,29 @@ fn handle_code_result<T>(result: Result<T, String>, code_type: &str) -> T {
     }
 }
 
-pub fn generate_code(n: usize, k: usize, w: usize, code_type: String) -> (Array2<u8>, Array2<u8>) {
+pub fn generate_code(
+    n: usize,
+    k: usize,
+    w: usize,
+    code_type: String,
+) -> (Array2<u8>, Array2<u8>, Option<GoppaParams>) {
     match code_type.as_str() {
-        "random" => handle_code_result(generate_random_code(n, k), "random"),
-        "hamming" => handle_code_result(generate_hamming_code(n, k), "hamming"),
-        "goppa" => handle_code_result(generate_goppa_code(n, k, w), "goppa"),
-        "qc" => handle_code_result(generate_qc_code(n, k), "qc"),
+        "random" => {
+            let (g, h) = handle_code_result(generate_random_code(n, k), "random");
+            (g, h, None)
+        }
+        "hamming" => {
+            let (g, h) = handle_code_result(generate_hamming_code(n, k), "hamming");
+            (g, h, None)
+        }
+        "goppa" => {
+            let (g, h, goppa_params) = handle_code_result(generate_goppa_code(n, k, w), "goppa");
+            (g, h, Some(goppa_params))
+        }
+        "qc" => {
+            let (g, h) = handle_code_result(generate_qc_code(n, k), "qc");
+            (g, h, None)
+        }
         _ => {
             eprintln!("Error: Unsupported code type '{}'", code_type);
             process::exit(1);
@@ -89,7 +107,7 @@ pub fn generate_goppa_code(
     n: usize,
     k: usize,
     t: usize,
-) -> Result<(Array2<u8>, Array2<u8>), String> {
+) -> Result<(Array2<u8>, Array2<u8>, GoppaParams), String> {
     let m = (n as f64).log2().ceil() as u8; // Determine the field size m such that 2^m > n
 
     if k > n - (m as usize) * t {
@@ -103,44 +121,20 @@ pub fn generate_goppa_code(
         ));
     }
 
-    let field = FiniteField::new(m); // Create a finite field GF(2^m)
-
-    let goppa_poly = field.random_irreducible_poly(t); // Generate a random irreducible polynomial of degree t
-
-    let mut support = field.random_support(n); // Generate a random support set L of size n (distinct elements from GF(2^m))
-
-    // Validate that the Goppa polynomial has no roots in the support set
-    let mut valid = false;
-    while !valid {
-        valid = true;
-        for j in 0..support.len() {
-            let l_j = support[j];
-            let g_l_j = field.evaluate_poly(&goppa_poly, l_j);
-            if g_l_j == 0 {
-                // Found a root of g(z) in the support set
-                valid = false;
-
-                let field_size = 1 << field.get_m();
-                let mut rng = rand::thread_rng();
-                let mut new_element;
-                loop {
-                    new_element = rng.gen_range(1..field_size) as u8;
-                    if !support.contains(&new_element) {
-                        break;
-                    }
-                }
-                support[j] = new_element;
-
-                break;
-            }
-        }
-    }
+    let (goppa_poly, support, field) = generate_valid_goppa_params(n, t);
 
     let h = generate_goppa_parity_matrix(n, t, &goppa_poly, &support, &field);
 
     let (g, h_systematic) = convert_to_systematic(h); // Convert H to systematic form and derive the generator matrix
 
-    Ok((g, h_systematic))
+    let params = GoppaParams {
+        field,
+        goppa_poly,
+        support,
+        t,
+    };
+
+    Ok((g, h_systematic, params))
 }
 
 pub fn generate_qc_code(n: usize, k: usize) -> Result<(Array2<u8>, Array2<u8>), String> {

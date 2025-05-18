@@ -1,4 +1,4 @@
-use crate::attacks::attack_utils::calculate_syndrome;
+use crate::algorithms::algorithm_utils::calculate_syndrome;
 use ndarray::Array2;
 use rand::{seq::SliceRandom, thread_rng};
 use std::collections::HashMap;

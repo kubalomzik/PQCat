@@ -1,6 +1,6 @@
 use clap::{Parser, Subcommand};
 mod algorithm_runner;
-mod attacks;
+mod algorithms;
 mod code_generator;
 mod codes;
 mod types;
@@ -84,6 +84,15 @@ enum Commands {
         #[arg(short, long, default_value = "random")]
         code_type: String,
     },
+    Patterson {
+        #[arg(short, long, default_value_t = 31)]
+        n: usize,
+        #[arg(short, long, default_value_t = 16)]
+        k: usize,
+        #[arg(short, long, default_value_t = 3)]
+        w: usize,
+        // Code type is fixed to "goppa" for Patterson
+    },
 }
 
 fn main() {
@@ -126,6 +135,11 @@ fn main() {
         Commands::Bjmm { n, k, w, code_type } => {
             let code_params = CodeParams { n, k, w, code_type };
             run_algorithm("bjmm", code_params, None);
+        }
+        Commands::Patterson { n, k, w } => {
+            let code_type = "goppa".to_string();
+            let code_params = CodeParams { n, k, w, code_type };
+            run_algorithm("patterson", code_params, None);
         }
     }
 }
