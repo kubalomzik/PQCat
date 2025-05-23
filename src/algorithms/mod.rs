@@ -1,6 +1,7 @@
 pub mod algorithm_utils;
 pub mod ball_collision;
 pub mod bjmm;
+pub mod config;
 pub mod lee_brickell;
 pub mod mmt;
 pub mod patterson;

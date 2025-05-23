@@ -1,4 +1,5 @@
 use crate::algorithms::algorithm_utils::calculate_syndrome;
+use crate::algorithms::config::{LIST_SIZE, MAX_ITERATIONS};
 use ndarray::Array2;
 use rand::{seq::SliceRandom, thread_rng};
 use std::collections::HashMap;
@@ -12,15 +13,10 @@ pub fn run_ball_collision_algorithm(
 ) -> Option<Vec<u8>> {
     let start = Instant::now();
 
-    let max_iterations = 100;
-    let list_size = 1000;
-
     let target_syndrome = calculate_syndrome(received_vector, h);
     let r = h.shape()[0];
 
-    for iteration in 0..max_iterations {
-        println!("Iteration {}/{}", iteration + 1, max_iterations);
-
+    for _iteration in 0..MAX_ITERATIONS {
         // Split indices into two parts
         let mut indices: Vec<usize> = (0..n).collect();
         indices.shuffle(&mut thread_rng());
@@ -35,7 +31,7 @@ pub fn run_ball_collision_algorithm(
 
         // Generate first list
         let mut list1: HashMap<Vec<u8>, Vec<usize>> = HashMap::new();
-        for _ in 0..list_size {
+        for _ in 0..LIST_SIZE {
             // Select random positions from part1
             let mut rng = thread_rng();
             let selected_indices = part1
@@ -60,7 +56,7 @@ pub fn run_ball_collision_algorithm(
         }
 
         // Generate second list and check for collisions
-        for _ in 0..list_size {
+        for _ in 0..LIST_SIZE {
             // Select random positions from part2
             let mut rng = thread_rng();
             let selected_indices = part2

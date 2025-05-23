@@ -1,4 +1,5 @@
 use crate::algorithms::algorithm_utils::{calculate_partial_syndrome, calculate_syndrome};
+use crate::algorithms::config::{LIST_SIZE, MAX_ITERATIONS};
 use ndarray::Array2;
 use rand::{seq::SliceRandom, thread_rng};
 use std::collections::HashMap;
@@ -12,15 +13,13 @@ pub fn run_bjmm_algorithm(
 ) -> Option<Vec<u8>> {
     let start = Instant::now();
 
-    let max_iterations = 100;
-    let list_size = 256;
     let r = h.shape()[0];
 
     let target_syndrome = calculate_syndrome(received_vector, h);
 
     let mut rng = thread_rng();
 
-    for _iteration in 0..max_iterations {
+    for _iteration in 0..MAX_ITERATIONS {
         // Bring parity check matrix to systematic form (permute columns)
         let mut indices: Vec<usize> = (0..n).collect();
         indices.shuffle(&mut rng);
@@ -41,7 +40,7 @@ pub fn run_bjmm_algorithm(
         // Build intermediate representation lists (first level)
 
         let mut list_a: HashMap<Vec<u8>, Vec<Vec<usize>>> = HashMap::new();
-        for _ in 0..list_size {
+        for _ in 0..LIST_SIZE {
             let selected_indices = part1
                 .choose_multiple(&mut rng, w1.min(part1.len()))
                 .cloned()
@@ -56,7 +55,7 @@ pub fn run_bjmm_algorithm(
         }
 
         let mut list_b: HashMap<Vec<u8>, Vec<Vec<usize>>> = HashMap::new();
-        for _ in 0..list_size {
+        for _ in 0..LIST_SIZE {
             let selected_indices = part2
                 .choose_multiple(&mut rng, w2.min(part2.len()))
                 .cloned()
@@ -73,7 +72,7 @@ pub fn run_bjmm_algorithm(
         // Build second-level representation lists by merging
 
         let mut list_c: HashMap<Vec<u8>, Vec<Vec<usize>>> = HashMap::new();
-        for _ in 0..list_size {
+        for _ in 0..LIST_SIZE {
             let selected_indices = part3
                 .choose_multiple(&mut rng, w3.min(part3.len()))
                 .cloned()
@@ -88,7 +87,7 @@ pub fn run_bjmm_algorithm(
         }
 
         let mut list_d: HashMap<Vec<u8>, Vec<Vec<usize>>> = HashMap::new();
-        for _ in 0..list_size {
+        for _ in 0..LIST_SIZE {
             let selected_indices = part4
                 .choose_multiple(&mut rng, w4.min(part4.len()))
                 .cloned()
