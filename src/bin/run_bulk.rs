@@ -15,6 +15,17 @@ fn extract_time(output: &str) -> Option<u64> {
     None
 }
 
+fn extract_memory(output: &str) -> Option<u64> {
+    let re = Regex::new(r"Peak memory:\s*(\d+)\s*KiB").unwrap();
+
+    if let Some(captures) = re.captures(output) {
+        if let Some(mem_str) = captures.get(1) {
+            return mem_str.as_str().parse::<u64>().ok();
+        }
+    }
+    None
+}
+
 fn main() {
     let runs = 100;
     let algorithm_name = "lee-brickell";
@@ -34,7 +45,7 @@ fn main() {
     let mut writer = Writer::from_writer(file);
 
     writer
-        .write_record(["Run", "Time (ns)", "Result"])
+        .write_record(["Run", "Time (μs)", "Memory (KiB)", "Result"])
         .expect("Failed to write CSV headers");
 
     for run in 1..=runs {
@@ -75,20 +86,20 @@ fn main() {
             "fail"
         };
 
-        let duration = extract_time(&stdout_str);
+        let duration = extract_time(&stdout_str).unwrap_or(0);
+        let memory = extract_memory(&stdout_str).unwrap_or(0);
 
         println!(
-            "Run {}: Time = {} ns Result = {}\n",
-            run,
-            duration.unwrap(),
-            result
+            "Run {}: Time = {} μs, Memory = {} KiB, Result = {}\n",
+            run, duration, memory, result
         );
 
         // Write to CSV
         writer
             .write_record(&[
                 run.to_string(),
-                duration.unwrap().to_string(),
+                duration.to_string(),
+                memory.to_string(),
                 result.to_string(),
             ])
             .expect("Failed to write to CSV");

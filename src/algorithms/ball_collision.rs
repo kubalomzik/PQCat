@@ -1,5 +1,6 @@
 use crate::algorithms::algorithm_utils::calculate_syndrome;
 use crate::algorithms::config::{LIST_SIZE, MAX_ITERATIONS};
+use crate::algorithms::metrics::{start_memory_tracking, update_peak_memory, AlgorithmMetrics};
 use ndarray::Array2;
 use rand::{seq::SliceRandom, thread_rng};
 use std::collections::HashMap;
@@ -10,10 +11,13 @@ pub fn run_ball_collision_algorithm(
     h: &Array2<u8>,
     n: usize,
     weight: usize,
-) -> Option<Vec<u8>> {
-    let start = Instant::now();
+) -> (Option<Vec<u8>>, AlgorithmMetrics) {
+    let start_time = Instant::now();
+    let start_memory = start_memory_tracking();
+    let mut peak_memory = 0;
 
     let target_syndrome = calculate_syndrome(received_vector, h);
+    update_peak_memory(start_memory, &mut peak_memory);
     let r = h.shape()[0];
 
     for _iteration in 0..MAX_ITERATIONS {
@@ -85,28 +89,38 @@ pub fn run_ball_collision_algorithm(
             // Look for matching syndrome in list1
             if let Some(indices1) = list1.get(&needed_syndrome) {
                 // Found a potential match, create error vector
-                let mut error_vector = vec![0; n];
+                let mut candidate_error = vec![0; n];
 
                 // Set bits from both lists
                 for &i in indices1 {
-                    error_vector[i] = 1;
+                    candidate_error[i] = 1;
                 }
 
                 for &i in &selected_indices {
-                    error_vector[i] = 1;
+                    candidate_error[i] = 1;
                 }
 
-                let check_syndrome = calculate_syndrome(&error_vector, h);
+                let check_syndrome = calculate_syndrome(&candidate_error, h);
                 if check_syndrome == target_syndrome {
-                    let duration = start.elapsed().as_micros();
-                    println!("Time: {} μs", duration);
-                    return Some(error_vector);
+                    update_peak_memory(start_memory, &mut peak_memory);
+
+                    let metrics = AlgorithmMetrics {
+                        time: start_time.elapsed().as_micros() as usize,
+                        peak_memory,
+                    };
+
+                    return (Some(candidate_error), metrics);
                 }
             }
         }
     }
 
-    let duration = start.elapsed().as_micros();
-    println!("Time: {} μs", duration);
-    None
+    update_peak_memory(start_memory, &mut peak_memory);
+
+    let metrics = AlgorithmMetrics {
+        time: start_time.elapsed().as_micros() as usize,
+        peak_memory,
+    };
+
+    (None, metrics)
 }

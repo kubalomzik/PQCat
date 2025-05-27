@@ -1,6 +1,7 @@
 use crate::algorithms::algorithm_utils::{
     apply_errors, calculate_syndrome, generate_random_error_vector,
 };
+use crate::algorithms::metrics::{print_metrics, AlgorithmMetrics};
 use crate::algorithms::{ball_collision, bjmm, lee_brickell, mmt, patterson, prange, stern};
 use crate::code_generator::generate_code;
 use crate::types::{CodeParams, PartitionParams};
@@ -18,8 +19,9 @@ pub fn run_algorithm(
     );
 
     let original_error = generate_random_error_vector(code_params.n, code_params.w); // Generate a random error vector of weight w
+    println!("Original Error Vector: {:?}", original_error);
 
-    let decoded_error = match algorithm_name {
+    let (decoded_err, algorithm_metrics) = match algorithm_name {
         "mmt" => {
             /*
             This algorithm, unlike other available here, does not work directly with the corrupted codeword.
@@ -34,12 +36,17 @@ pub fn run_algorithm(
                 mmt::run_mmt_algorithm(&h, &s_array, code_params.n, code_params.w, p, l1, l2)
             } else {
                 eprintln!("MMT algorithm requires partition parameters");
-                None
+                (
+                    None,
+                    AlgorithmMetrics {
+                        time: 0,
+                        peak_memory: 0,
+                    },
+                )
             }
         }
         _ => {
             let received_vector = apply_errors(&g.row(0).to_vec(), &original_error); // Apply errors to a valid codeword
-
             println!("Received Vector:       {:?}", received_vector);
 
             match algorithm_name {
@@ -64,24 +71,31 @@ pub fn run_algorithm(
                     let goppa_params = goppa_params.unwrap();
                     patterson::run_patterson_algorithm(&received_vector, &h, &goppa_params)
                 }
-                _ => None,
+                _ => (
+                    None,
+                    AlgorithmMetrics {
+                        time: 0,
+                        peak_memory: 0,
+                    },
+                ),
             }
         }
     };
 
-    if let Some(decoded) = decoded_error {
-        println!("Decoded Error Vector:  {:?}", decoded);
+    if let Some(decoded_error) = decoded_err {
+        println!("Decoded Error Vector:  {:?}", decoded_error);
+        print_metrics(&algorithm_metrics);
 
         // Check syndrome correctness
-        let decoded_syndrome = calculate_syndrome(&decoded, &h);
+        let decoded_syndrome = calculate_syndrome(&decoded_error, &h);
         let original_syndrome = calculate_syndrome(&original_error, &h);
 
         // Check weight constraint
-        let decoded_weight = decoded.iter().filter(|&&bit| bit == 1).count();
+        let decoded_weight = decoded_error.iter().filter(|&&bit| bit == 1).count();
 
         if decoded_syndrome == original_syndrome && decoded_weight <= code_params.w {
             println!("Result: success (valid error vector found)");
-            if decoded == original_error {
+            if decoded_error == original_error {
                 println!("[Note: Found the exact original error vector]");
             } else {
                 println!("[Note: Found an alternative valid error vector]");

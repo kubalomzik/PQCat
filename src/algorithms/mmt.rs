@@ -1,5 +1,7 @@
+use crate::algorithms::metrics::{start_memory_tracking, update_peak_memory, AlgorithmMetrics};
 use ndarray::{Array1, Array2};
 use rand::{seq::SliceRandom, thread_rng};
+
 use std::collections::HashMap;
 use std::time::Instant;
 
@@ -11,8 +13,12 @@ pub fn run_mmt_algorithm(
     p: usize,
     l1: usize,
     l2: usize,
-) -> Option<Vec<u8>> {
-    let start = Instant::now();
+) -> (Option<Vec<u8>>, AlgorithmMetrics) {
+    let start_time = Instant::now();
+    let start_memory = start_memory_tracking();
+    let mut peak_memory = 0;
+
+    update_peak_memory(start_memory, &mut peak_memory);
 
     // Ensure p is at least 2 (we need at least 2 partitions)
     let p = p.max(2);
@@ -129,18 +135,18 @@ pub fn run_mmt_algorithm(
             for subset1 in subsets1 {
                 for subset2 in subsets2 {
                     // Combine subsets to form error vector
-                    let mut error = vec![0; n];
+                    let mut candidate_error = vec![0; n];
                     for &idx in subset1.iter().chain(subset2.iter()) {
-                        error[idx] = 1;
+                        candidate_error[idx] = 1;
                     }
 
                     // Verify weight and syndrome
-                    let actual_weight = error.iter().filter(|&&bit| bit == 1).count();
+                    let actual_weight = candidate_error.iter().filter(|&&bit| bit == 1).count();
                     if actual_weight == weight {
                         // Calculate full syndrome to verify
                         let mut check_syndrome = vec![0; r];
                         for idx in 0..n {
-                            if error[idx] == 1 {
+                            if candidate_error[idx] == 1 {
                                 for j in 0..r {
                                     check_syndrome[j] ^= h[[j, idx]];
                                 }
@@ -148,9 +154,14 @@ pub fn run_mmt_algorithm(
                         }
 
                         if check_syndrome == syndrome_vec {
-                            let duration = start.elapsed().as_micros();
-                            println!("Time: {} μs", duration);
-                            return Some(error);
+                            update_peak_memory(start_memory, &mut peak_memory);
+
+                            let metrics = AlgorithmMetrics {
+                                time: start_time.elapsed().as_micros() as usize,
+                                peak_memory,
+                            };
+
+                            return (Some(candidate_error), metrics);
                         }
                     }
                 }
@@ -158,7 +169,12 @@ pub fn run_mmt_algorithm(
         }
     }
 
-    let duration = start.elapsed().as_micros();
-    println!("Time: {} μs", duration);
-    None
+    update_peak_memory(start_memory, &mut peak_memory);
+
+    let metrics = AlgorithmMetrics {
+        time: start_time.elapsed().as_micros() as usize,
+        peak_memory,
+    };
+
+    (None, metrics)
 }

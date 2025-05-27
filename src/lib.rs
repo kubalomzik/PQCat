@@ -6,6 +6,7 @@ pub mod algorithms {
     pub mod bjmm;
     pub mod config;
     pub mod lee_brickell;
+    pub mod metrics;
     pub mod mmt;
     pub mod patterson;
     pub mod prange;

@@ -1,4 +1,5 @@
 use crate::algorithms::algorithm_utils::calculate_syndrome;
+use crate::algorithms::metrics::{start_memory_tracking, update_peak_memory, AlgorithmMetrics};
 use crate::codes::polynomial_utils::{
     evaluate_poly, polynomial_add, polynomial_divide, polynomial_mod, polynomial_multiply,
     trim_polynomial,
@@ -158,8 +159,12 @@ pub fn run_patterson_algorithm(
     received_vector: &[u8],
     h: &Array2<u8>,
     goppa_params: &GoppaParams,
-) -> Option<Vec<u8>> {
-    let start = Instant::now();
+) -> (Option<Vec<u8>>, AlgorithmMetrics) {
+    let start_time = Instant::now();
+    let start_memory = start_memory_tracking();
+    let mut peak_memory = 0;
+
+    update_peak_memory(start_memory, &mut peak_memory);
 
     let support = &goppa_params.support;
     let goppa_poly = &goppa_params.goppa_poly;
@@ -173,9 +178,15 @@ pub fn run_patterson_algorithm(
 
     if syndrome.iter().all(|&x| x == 0) {
         // No errors detected
-        let duration = start.elapsed().as_micros();
-        println!("No errors detected, time: {} μs", duration);
-        return Some(vec![0; n]);
+        update_peak_memory(start_memory, &mut peak_memory);
+
+        let metrics = AlgorithmMetrics {
+            time: start_time.elapsed().as_micros() as usize,
+            peak_memory,
+        };
+
+        println!("No errors detected");
+        return (Some(vec![0; n]), metrics);
     }
 
     // Compute T(z) = sqrt(S(z) + z) mod g(z)
@@ -190,7 +201,7 @@ pub fn run_patterson_algorithm(
 
     // Construct error vector from positions
     let mut error_vector = vec![0; n];
-    for pos in error_positions {
+    for &pos in &error_positions {
         error_vector[pos] = 1;
     }
 
@@ -199,13 +210,20 @@ pub fn run_patterson_algorithm(
     let original_syndrome = calculate_syndrome(received_vector, h);
 
     if check_syndrome == original_syndrome {
-        let duration = start.elapsed().as_micros();
-        println!("Time: {} μs", duration);
-        return Some(error_vector);
+        update_peak_memory(start_memory, &mut peak_memory);
+        let metrics = AlgorithmMetrics {
+            time: start_time.elapsed().as_micros() as usize,
+            peak_memory,
+        };
+        return (Some(error_vector), metrics);
     }
 
-    let duration = start.elapsed().as_micros();
-    println!("Time: {} μs", duration);
+    update_peak_memory(start_memory, &mut peak_memory);
 
-    None
+    let metrics = AlgorithmMetrics {
+        time: start_time.elapsed().as_micros() as usize,
+        peak_memory,
+    };
+
+    (None, metrics)
 }
