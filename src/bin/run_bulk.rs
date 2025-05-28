@@ -48,6 +48,11 @@ fn main() {
         .write_record(["Run", "Time (μs)", "Memory (KiB)", "Result"])
         .expect("Failed to write CSV headers");
 
+    let mut total_time = 0;
+    let mut total_memory = 0;
+    let mut successful_runs = 0;
+    let mut completed_runs = 0;
+
     for run in 1..=runs {
         let mut sys = System::new_all();
         sys.refresh_all();
@@ -90,7 +95,7 @@ fn main() {
         let memory = extract_memory(&stdout_str).unwrap_or(0);
 
         println!(
-            "Run {}: Time = {} μs, Memory = {} KiB, Result = {}\n",
+            "Run {}: Time = {} μs, Memory = {} KiB, Result = {}",
             run, duration, memory, result
         );
 
@@ -103,11 +108,41 @@ fn main() {
                 result.to_string(),
             ])
             .expect("Failed to write to CSV");
+        total_time += duration;
+        total_memory += memory;
+        if result == "success" {
+            successful_runs += 1;
+        }
+        completed_runs += 1;
     }
 
     writer.flush().expect("Failed to flush CSV writer");
     println!(
-        "Results saved in ./results/{}_n{}_k{}_w{}_{}.csv",
+        "\nResults saved in ./results/{}_n{}_k{}_w{}_{}.csv",
         algorithm_name, n, k, w, code_type
+    );
+
+    let avg_time = if completed_runs > 0 {
+        total_time as f64 / completed_runs as f64
+    } else {
+        0.0
+    };
+    let avg_memory = if completed_runs > 0 {
+        total_memory as f64 / completed_runs as f64
+    } else {
+        0.0
+    };
+    let success_rate = if completed_runs > 0 {
+        (successful_runs as f64 / completed_runs as f64) * 100.0
+    } else {
+        0.0
+    };
+
+    println!("\nBulk run stats:");
+    println!("Avg Time: {:.2} μs", avg_time);
+    println!("Avg Memory: {:.2} KiB", avg_memory);
+    println!(
+        "Success Rate: {:.2}% ({} of {} runs)",
+        success_rate, successful_runs, completed_runs
     );
 }
