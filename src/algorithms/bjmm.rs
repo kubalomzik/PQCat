@@ -1,6 +1,9 @@
 use crate::algorithms::algorithm_utils::{calculate_partial_syndrome, calculate_syndrome};
+use crate::algorithms::config::{LIST_SIZE, MAX_ITERATIONS};
+use crate::algorithms::metrics::{AlgorithmMetrics, start_memory_tracking, update_peak_memory};
 use ndarray::Array2;
-use rand::{seq::SliceRandom, thread_rng};
+use rand::prelude::IndexedRandom;
+use rand::{rng, seq::SliceRandom};
 use std::collections::HashMap;
 use std::time::Instant;
 
@@ -9,18 +12,17 @@ pub fn run_bjmm_algorithm(
     h: &Array2<u8>,
     n: usize,
     weight: usize,
-) -> Option<Vec<u8>> {
-    let start = Instant::now();
-
-    let max_iterations = 100;
-    let list_size = 256;
-    let r = h.shape()[0];
+) -> (Option<Vec<u8>>, AlgorithmMetrics) {
+    let start_time = Instant::now();
+    let start_memory = start_memory_tracking();
+    let mut peak_memory = 0;
 
     let target_syndrome = calculate_syndrome(received_vector, h);
+    update_peak_memory(start_memory, &mut peak_memory);
+    let r = h.shape()[0];
+    let mut rng = rng();
 
-    let mut rng = thread_rng();
-
-    for _iteration in 0..max_iterations {
+    for _iteration in 0..MAX_ITERATIONS {
         // Bring parity check matrix to systematic form (permute columns)
         let mut indices: Vec<usize> = (0..n).collect();
         indices.shuffle(&mut rng);
@@ -41,7 +43,7 @@ pub fn run_bjmm_algorithm(
         // Build intermediate representation lists (first level)
 
         let mut list_a: HashMap<Vec<u8>, Vec<Vec<usize>>> = HashMap::new();
-        for _ in 0..list_size {
+        for _ in 0..LIST_SIZE {
             let selected_indices = part1
                 .choose_multiple(&mut rng, w1.min(part1.len()))
                 .cloned()
@@ -56,7 +58,7 @@ pub fn run_bjmm_algorithm(
         }
 
         let mut list_b: HashMap<Vec<u8>, Vec<Vec<usize>>> = HashMap::new();
-        for _ in 0..list_size {
+        for _ in 0..LIST_SIZE {
             let selected_indices = part2
                 .choose_multiple(&mut rng, w2.min(part2.len()))
                 .cloned()
@@ -73,7 +75,7 @@ pub fn run_bjmm_algorithm(
         // Build second-level representation lists by merging
 
         let mut list_c: HashMap<Vec<u8>, Vec<Vec<usize>>> = HashMap::new();
-        for _ in 0..list_size {
+        for _ in 0..LIST_SIZE {
             let selected_indices = part3
                 .choose_multiple(&mut rng, w3.min(part3.len()))
                 .cloned()
@@ -88,7 +90,7 @@ pub fn run_bjmm_algorithm(
         }
 
         let mut list_d: HashMap<Vec<u8>, Vec<Vec<usize>>> = HashMap::new();
-        for _ in 0..list_size {
+        for _ in 0..LIST_SIZE {
             let selected_indices = part4
                 .choose_multiple(&mut rng, w4.min(part4.len()))
                 .cloned()
@@ -133,21 +135,27 @@ pub fn run_bjmm_algorithm(
                                 for subset_c in subsets_c {
                                     for subset_d in subsets_d {
                                         // Create the combined error vector
-                                        let mut error_vector = vec![0; n];
+                                        let mut candidate_error = vec![0; n];
                                         for &idx in subset_a
                                             .iter()
                                             .chain(subset_b.iter())
                                             .chain(subset_c.iter())
                                             .chain(subset_d.iter())
                                         {
-                                            error_vector[idx] = 1;
+                                            candidate_error[idx] = 1;
                                         }
 
-                                        let check_syndrome = calculate_syndrome(&error_vector, h);
+                                        let check_syndrome =
+                                            calculate_syndrome(&candidate_error, h);
                                         if check_syndrome == target_syndrome {
-                                            let duration = start.elapsed().as_micros();
-                                            println!("Time: {} μs", duration);
-                                            return Some(error_vector);
+                                            update_peak_memory(start_memory, &mut peak_memory);
+
+                                            let metrics = AlgorithmMetrics {
+                                                time: start_time.elapsed().as_micros() as usize,
+                                                peak_memory,
+                                            };
+
+                                            return (Some(candidate_error), metrics);
                                         }
                                     }
                                 }
@@ -159,7 +167,12 @@ pub fn run_bjmm_algorithm(
         }
     }
 
-    let duration = start.elapsed().as_micros();
-    println!("Time: {} μs", duration);
-    None
+    update_peak_memory(start_memory, &mut peak_memory);
+
+    let metrics = AlgorithmMetrics {
+        time: start_time.elapsed().as_micros() as usize,
+        peak_memory,
+    };
+
+    (None, metrics)
 }

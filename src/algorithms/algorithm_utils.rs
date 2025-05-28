@@ -1,5 +1,6 @@
 use itertools::Itertools;
 use ndarray::Array2;
+use rand::rng;
 use rand::seq::SliceRandom;
 
 pub fn generate_random_error_vector(n: usize, weight: usize) -> Vec<u8> {
@@ -9,7 +10,7 @@ pub fn generate_random_error_vector(n: usize, weight: usize) -> Vec<u8> {
     );
 
     let mut indices: Vec<usize> = (0..n).collect();
-    indices.shuffle(&mut rand::thread_rng());
+    indices.shuffle(&mut rng());
     let mut error_vector = vec![0; n];
     for &i in indices.iter().take(weight) {
         error_vector[i] = 1;

@@ -1,6 +1,9 @@
 use crate::algorithms::algorithm_utils::calculate_syndrome;
+use crate::algorithms::config::{LIST_SIZE, MAX_ITERATIONS};
+use crate::algorithms::metrics::{AlgorithmMetrics, start_memory_tracking, update_peak_memory};
 use ndarray::Array2;
-use rand::{seq::SliceRandom, thread_rng};
+use rand::prelude::IndexedRandom;
+use rand::{rng, seq::SliceRandom};
 use std::collections::HashMap;
 use std::time::Instant;
 
@@ -9,21 +12,19 @@ pub fn run_ball_collision_algorithm(
     h: &Array2<u8>,
     n: usize,
     weight: usize,
-) -> Option<Vec<u8>> {
-    let start = Instant::now();
-
-    let max_iterations = 100;
-    let list_size = 1000;
+) -> (Option<Vec<u8>>, AlgorithmMetrics) {
+    let start_time = Instant::now();
+    let start_memory = start_memory_tracking();
+    let mut peak_memory = 0;
 
     let target_syndrome = calculate_syndrome(received_vector, h);
+    update_peak_memory(start_memory, &mut peak_memory);
     let r = h.shape()[0];
 
-    for iteration in 0..max_iterations {
-        println!("Iteration {}/{}", iteration + 1, max_iterations);
-
+    for _iteration in 0..MAX_ITERATIONS {
         // Split indices into two parts
         let mut indices: Vec<usize> = (0..n).collect();
-        indices.shuffle(&mut thread_rng());
+        indices.shuffle(&mut rng());
 
         let half = n / 2;
         let part1: Vec<usize> = indices[0..half].to_vec();
@@ -35,9 +36,9 @@ pub fn run_ball_collision_algorithm(
 
         // Generate first list
         let mut list1: HashMap<Vec<u8>, Vec<usize>> = HashMap::new();
-        for _ in 0..list_size {
+        for _ in 0..LIST_SIZE {
             // Select random positions from part1
-            let mut rng = thread_rng();
+            let mut rng = rng();
             let selected_indices = part1
                 .choose_multiple(&mut rng, p1.min(part1.len()))
                 .cloned()
@@ -60,9 +61,9 @@ pub fn run_ball_collision_algorithm(
         }
 
         // Generate second list and check for collisions
-        for _ in 0..list_size {
+        for _ in 0..LIST_SIZE {
             // Select random positions from part2
-            let mut rng = thread_rng();
+            let mut rng = rng();
             let selected_indices = part2
                 .choose_multiple(&mut rng, p2.min(part2.len()))
                 .cloned()
@@ -89,28 +90,38 @@ pub fn run_ball_collision_algorithm(
             // Look for matching syndrome in list1
             if let Some(indices1) = list1.get(&needed_syndrome) {
                 // Found a potential match, create error vector
-                let mut error_vector = vec![0; n];
+                let mut candidate_error = vec![0; n];
 
                 // Set bits from both lists
                 for &i in indices1 {
-                    error_vector[i] = 1;
+                    candidate_error[i] = 1;
                 }
 
                 for &i in &selected_indices {
-                    error_vector[i] = 1;
+                    candidate_error[i] = 1;
                 }
 
-                let check_syndrome = calculate_syndrome(&error_vector, h);
+                let check_syndrome = calculate_syndrome(&candidate_error, h);
                 if check_syndrome == target_syndrome {
-                    let duration = start.elapsed().as_micros();
-                    println!("Time: {} μs", duration);
-                    return Some(error_vector);
+                    update_peak_memory(start_memory, &mut peak_memory);
+
+                    let metrics = AlgorithmMetrics {
+                        time: start_time.elapsed().as_micros() as usize,
+                        peak_memory,
+                    };
+
+                    return (Some(candidate_error), metrics);
                 }
             }
         }
     }
 
-    let duration = start.elapsed().as_micros();
-    println!("Time: {} μs", duration);
-    None
+    update_peak_memory(start_memory, &mut peak_memory);
+
+    let metrics = AlgorithmMetrics {
+        time: start_time.elapsed().as_micros() as usize,
+        peak_memory,
+    };
+
+    (None, metrics)
 }

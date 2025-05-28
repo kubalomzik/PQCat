@@ -1,4 +1,4 @@
-use ndarray::{s, Array2, Axis};
+use ndarray::{Array2, Axis, s};
 
 pub fn convert_to_systematic(h: Array2<u8>) -> (Array2<u8>, Array2<u8>) {
     let (m, n) = h.dim();

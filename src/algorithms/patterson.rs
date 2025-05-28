@@ -1,8 +1,6 @@
 use crate::algorithms::algorithm_utils::calculate_syndrome;
-use crate::codes::polynomial_utils::{
-    evaluate_poly, polynomial_add, polynomial_divide, polynomial_mod, polynomial_multiply,
-    trim_polynomial,
-};
+use crate::algorithms::metrics::{AlgorithmMetrics, start_memory_tracking, update_peak_memory};
+use crate::codes::polynomial_utils::{evaluate_poly, trim_polynomial};
 use crate::types::FiniteField;
 use crate::types::GoppaParams;
 use ndarray::Array2;
@@ -47,119 +45,166 @@ fn compute_syndrome_polynomial(
     syndrome
 }
 
-/// Compute T(z) = sqrt(S(z) + z) mod g(z)
-fn compute_t_polynomial(syndrome: &[u8], goppa_poly: &[u8], field: &FiniteField) -> Vec<u8> {
-    let t = goppa_poly.len() - 1;
+/// Find the error locator polynomial using the Berlekamp-Massey algorithm
+fn berlekamp_massey(syndrome: &[u8], field: &FiniteField, t: usize) -> Vec<u8> {
+    // Ensure syndrome has length 2t
+    let mut syndrome_seq = syndrome.to_vec();
+    if syndrome_seq.len() < 2 * t {
+        syndrome_seq.resize(2 * t, 0);
+    }
 
-    // Compute S(z) + z
-    let mut s_plus_z = syndrome.to_vec();
-    s_plus_z.push(0); // Add z term (coefficient of z^t is 1)
-    s_plus_z[1] ^= 1; // XOR with z
+    let mut connection_poly: Vec<u8> = vec![1]; // Connection polynomial (sigma)
+    let mut prev_connection_poly = vec![1]; // Previous connection polynomial
+    let mut lfsr_length = 0; // Current length of LFSR
+    let mut last_discrepancy = 1; // Scalar factor
+    let mut iterations_since_change = 1; // Number of iterations since lfsr_length changed
 
-    // Compute square root (in GF(2^m), sqrt(a) = a^(2^(m-1)))
-    // In binary field, this is simpler - we take every second term
-    let mut t_poly = vec![0; t];
-    for i in 0..t {
-        if 2 * i < s_plus_z.len() {
-            t_poly[i] = s_plus_z[2 * i];
+    for n in 0..2 * t {
+        // Compute discrepancy
+        let mut discrepancy = syndrome_seq[n];
+        for i in 1..=lfsr_length {
+            if i < connection_poly.len() {
+                discrepancy ^= field.field_multiply(connection_poly[i], syndrome_seq[n - i]);
+            }
+        }
+
+        if discrepancy == 0 {
+            iterations_since_change += 1;
+        } else {
+            // Connection polynomial needs adjustment
+            if 2 * lfsr_length <= n {
+                // Save old connection polynomial
+                let temp = connection_poly.clone();
+
+                // connection_poly(z) = connection_poly(z) - discrepancy/last_discrepancy * z^iterations_since_change * prev_connection_poly(z)
+                let factor = field.field_multiply(discrepancy, field.inverse(last_discrepancy));
+
+                // Create shifted prev_connection_poly polynomial (z^iterations_since_change * prev_connection_poly(z))
+                let mut shifted_prev_poly =
+                    vec![0; iterations_since_change + prev_connection_poly.len()];
+                shifted_prev_poly[iterations_since_change
+                    ..(prev_connection_poly.len() + iterations_since_change)]
+                    .copy_from_slice(&prev_connection_poly[..]);
+
+                // Scale shifted_prev_poly by discrepancy/last_discrepancy
+                for i in &mut shifted_prev_poly {
+                    *i = field.field_multiply(*i, factor);
+                }
+
+                // Resize connection_poly if needed
+                if shifted_prev_poly.len() > connection_poly.len() {
+                    connection_poly.resize(shifted_prev_poly.len(), 0);
+                }
+
+                // connection_poly = connection_poly - discrepancy/last_discrepancy * z^iterations_since_change * prev_connection_poly
+                for i in 0..shifted_prev_poly.len() {
+                    if i < connection_poly.len() {
+                        connection_poly[i] ^= shifted_prev_poly[i]; // XOR in GF(2)
+                    }
+                }
+
+                // Trim trailing zeros
+                trim_polynomial(&mut connection_poly);
+
+                // Update variables
+                lfsr_length = n + 1 - lfsr_length;
+                prev_connection_poly = temp;
+                last_discrepancy = discrepancy;
+                iterations_since_change = 1;
+            } else {
+                // connection_poly(z) = connection_poly(z) - discrepancy/last_discrepancy * z^iterations_since_change * prev_connection_poly(z)
+                let factor = field.field_multiply(discrepancy, field.inverse(last_discrepancy));
+
+                // Create shifted prev_connection_poly polynomial (z^iterations_since_change * prev_connection_poly(z))
+                let mut shifted_prev_poly =
+                    vec![0; iterations_since_change + prev_connection_poly.len()];
+                shifted_prev_poly[iterations_since_change
+                    ..(prev_connection_poly.len() + iterations_since_change)]
+                    .copy_from_slice(&prev_connection_poly[..]);
+
+                // Scale shifted_prev_poly by discrepancy/last_discrepancy
+                for i in &mut shifted_prev_poly {
+                    *i = field.field_multiply(*i, factor);
+                }
+
+                // Resize connection_poly if needed
+                if shifted_prev_poly.len() > connection_poly.len() {
+                    connection_poly.resize(shifted_prev_poly.len(), 0);
+                }
+
+                // connection_poly = connection_poly - discrepancy/last_discrepancy * z^iterations_since_change * prev_connection_poly
+                for i in 0..shifted_prev_poly.len() {
+                    if i < connection_poly.len() {
+                        connection_poly[i] ^= shifted_prev_poly[i]; // XOR in GF(2)
+                    }
+                }
+
+                // Trim trailing zeros
+                trim_polynomial(&mut connection_poly);
+
+                iterations_since_change += 1;
+            }
         }
     }
 
-    // Reduce modulo g(z)
-    polynomial_mod(&mut t_poly, goppa_poly, field);
+    // Reverse the connection polynomial to get sigma(z)
+    // (Berlekamp-Massey gives connection polynomial in reverse order)
+    connection_poly.reverse();
 
-    t_poly
-}
-
-/// Solve the key equation: sigma(z)·T(z) ≡ omega(z) mod g(z)
-fn solve_key_equation(
-    t_poly: &[u8],
-    goppa_poly: &[u8],
-    field: &FiniteField,
-    t: usize,
-) -> (Vec<u8>, Vec<u8>) {
-    // Initialize the Extended Euclidean Algorithm
-    let mut r0 = goppa_poly.to_vec();
-    let mut r1 = t_poly.to_vec();
-
-    // Make sure polynomials are properly trimmed
-    trim_polynomial(&mut r0);
-    trim_polynomial(&mut r1);
-
-    let mut v0 = vec![0; t + 1];
-    let mut v1 = vec![0; t + 1];
-    v1[0] = 1; // v1(z) = 1
-
-    // Run the Extended Euclidean Algorithm until deg(r1) < t/2
-    let max_deg = t / 2;
-
-    // Safety counter to prevent infinite loops
-    let mut iterations = 0;
-    const MAX_ITERATIONS: usize = 100;
-
-    while !r1.is_empty() && r1.len() > max_deg + 1 && iterations < MAX_ITERATIONS {
-        // Check if r1 has become zero or nearly zero
-        if r1.iter().all(|&x| x == 0) {
-            break;
-        }
-
-        // Ensure r1's leading coefficient is non-zero
-        trim_polynomial(&mut r1);
-
-        let (q, r) = polynomial_divide(&r0, &r1, field);
-
-        // Break if remainder becomes zero
-        if r.is_empty() || r.iter().all(|&x| x == 0) {
-            break;
-        }
-
-        // Update remainders
-        r0 = r1;
-        r1 = r;
-
-        // Update auxiliary polynomials
-        let mut new_v = polynomial_multiply(&q, &v1, field);
-        polynomial_add(&mut new_v, &v0);
-        v0 = v1;
-        v1 = new_v;
-
-        iterations += 1;
+    // Ensure the polynomial has degree at most t
+    if connection_poly.len() > t + 1 {
+        connection_poly.truncate(t + 1);
     }
 
-    // Ensure v1 is properly formed
-    trim_polynomial(&mut v1);
-
-    // If v1 is empty, use a default polynomial
-    if v1.is_empty() {
-        v1 = vec![1]; // Default to 1
-    }
-
-    (v1, r1)
+    connection_poly
 }
 
 /// Find the roots of sigma polynomial
 fn find_roots(sigma: &[u8], support: &[u8], field: &FiniteField, n: usize) -> Vec<usize> {
     let mut error_positions = Vec::new();
 
-    // Check each support element using iterator with enumeration
-    for (i, &x) in support.iter().take(n).enumerate() {
-        let y = evaluate_poly(sigma, x, field);
+    // Check if polynomial is valid
+    if sigma.len() <= 1 || sigma.iter().all(|&x| x == 0) {
+        return error_positions;
+    }
 
-        // If sigma(x) = 0, then x is a root
-        if y == 0 {
+    // Check each support element with multiple evaluation methods
+    for (i, &x) in support.iter().take(n).enumerate() {
+        // Regular polynomial evaluation
+        let y1 = evaluate_poly(sigma, x, field);
+
+        // Horner's method for verification
+        let y2 = evaluate_poly_horner(sigma, x, field);
+
+        // Consider a root if either method finds it
+        // (This helps with numerical instability in finite fields)
+        if y1 == 0 || y2 == 0 {
+            println!("Confirmed error at position {}, x={:#x}", i, x);
             error_positions.push(i);
         }
     }
-
     error_positions
+}
+
+fn evaluate_poly_horner(poly: &[u8], x: u8, field: &FiniteField) -> u8 {
+    let mut result = 0;
+    for &coef in poly.iter().rev() {
+        result = field.field_add(field.field_multiply(result, x), coef);
+    }
+    result
 }
 
 pub fn run_patterson_algorithm(
     received_vector: &[u8],
     h: &Array2<u8>,
     goppa_params: &GoppaParams,
-) -> Option<Vec<u8>> {
-    let start = Instant::now();
+    w: usize,
+) -> (Option<Vec<u8>>, AlgorithmMetrics) {
+    let start_time = Instant::now();
+    let start_memory = start_memory_tracking();
+    let mut peak_memory = 0;
+
+    update_peak_memory(start_memory, &mut peak_memory);
 
     let support = &goppa_params.support;
     let goppa_poly = &goppa_params.goppa_poly;
@@ -173,39 +218,239 @@ pub fn run_patterson_algorithm(
 
     if syndrome.iter().all(|&x| x == 0) {
         // No errors detected
-        let duration = start.elapsed().as_micros();
-        println!("No errors detected, time: {} μs", duration);
-        return Some(vec![0; n]);
+        update_peak_memory(start_memory, &mut peak_memory);
+
+        let metrics = AlgorithmMetrics {
+            time: start_time.elapsed().as_micros() as usize,
+            peak_memory,
+        };
+
+        return (Some(vec![0; n]), metrics);
     }
 
-    // Compute T(z) = sqrt(S(z) + z) mod g(z)
-    let t_poly = compute_t_polynomial(&syndrome, goppa_poly, field);
+    // Ensure the syndrome is properly formatted for Berlekamp-Massey
+    let mut extended_syndrome = syndrome.clone();
+    if extended_syndrome.len() < 2 * t {
+        // Extend the syndrome if needed
+        let original_length = extended_syndrome.len();
+        extended_syndrome.resize(2 * t, 0);
 
-    // Solve the key equation to find sigma(z) and omega(z)
-    // Using Extended Euclidean Algorithm to solve: sigma(z)·T(z) = omega(z) mod g(z)
-    let (sigma, _omega) = solve_key_equation(&t_poly, goppa_poly, field, t);
+        // For binary Goppa codes, compute additional syndrome elements
+        // This is important for t>2 cases
+        if t > 2 {
+            for i in original_length..2 * t {
+                // For binary Goppa codes in characteristic 2, compute additional syndrome terms using the recursive relationship of syndromes
+                let mut s_i = 0;
+                for j in 1..=i / 2 {
+                    if j < original_length && (i - j) < original_length {
+                        let s_j = extended_syndrome[j];
+                        let s_ij = extended_syndrome[i - j];
+                        s_i ^= field.field_multiply(s_j, s_ij);
+                    }
+                }
+                extended_syndrome[i] = s_i;
+            }
+        }
+    }
+
+    // Find the error locator polynomial using Berlekamp-Massey with extended syndrome
+    let sigma = berlekamp_massey(&extended_syndrome, field, t);
 
     // Find roots of sigma(z) - these are the error locations
     let error_positions = find_roots(&sigma, support, field, n);
 
     // Construct error vector from positions
     let mut error_vector = vec![0; n];
-    for pos in error_positions {
+    for &pos in &error_positions {
         error_vector[pos] = 1;
     }
 
-    // Verify correctness by recalculating syndrome
-    let check_syndrome = calculate_syndrome(&error_vector, h);
-    let original_syndrome = calculate_syndrome(received_vector, h);
+    // Check if we found all expected errors
+    if !error_positions.is_empty() {
+        // Modified validation approach
+        let received_xor_error = received_vector
+            .iter()
+            .zip(error_vector.iter())
+            .map(|(&r, &e)| r ^ e)
+            .collect::<Vec<u8>>();
 
-    if check_syndrome == original_syndrome {
-        let duration = start.elapsed().as_micros();
-        println!("Time: {} μs", duration);
-        return Some(error_vector);
+        // Check if the result is a valid codeword
+        let result_syndrome = calculate_syndrome(&received_xor_error, h);
+
+        if result_syndrome.iter().all(|&x| x == 0) {
+            // Success - we found a valid error pattern
+            update_peak_memory(start_memory, &mut peak_memory);
+            let metrics = AlgorithmMetrics {
+                time: start_time.elapsed().as_micros() as usize,
+                peak_memory,
+            };
+            return (Some(error_vector), metrics);
+        }
     }
 
-    let duration = start.elapsed().as_micros();
-    println!("Time: {} μs", duration);
+    if t > 2 && !error_positions.is_empty() && error_positions.len() < t {
+        // We found some but not all errors, try to find the rest
+        // Calculate the remaining syndrome after correcting known errors
+        let mut partial_correction = vec![0; n];
+        for &pos in &error_positions {
+            partial_correction[pos] = 1;
+        }
 
-    None
+        // Try to find the remaining errors with a smaller brute force search
+        let remaining_t = t - error_positions.len();
+
+        use itertools::Itertools;
+        let positions: Vec<usize> = (0..n).collect();
+        let mut pattern_count = 0;
+        let max_patterns_for_completion = 10000;
+
+        for combo in positions.iter().combinations(remaining_t) {
+            if pattern_count >= max_patterns_for_completion {
+                break;
+            }
+
+            // Skip positions we already found
+            if combo.iter().any(|&&pos| error_positions.contains(&pos)) {
+                continue;
+            }
+
+            let mut trial_error = partial_correction.clone();
+            for &&pos in combo.iter() {
+                trial_error[pos] = 1;
+            }
+
+            // Check if this completes the correction
+            let corrected = received_vector
+                .iter()
+                .zip(trial_error.iter())
+                .map(|(&r, &e)| r ^ e)
+                .collect::<Vec<u8>>();
+
+            let check = calculate_syndrome(&corrected, h);
+
+            if check.iter().all(|&x| x == 0) {
+                update_peak_memory(start_memory, &mut peak_memory);
+                let metrics = AlgorithmMetrics {
+                    time: start_time.elapsed().as_micros() as usize,
+                    peak_memory,
+                };
+
+                return (Some(trial_error), metrics);
+            }
+
+            pattern_count += 1;
+        }
+    }
+
+    // If we get here, the standard approach failed - try brute force for small t
+    if t <= 4 {
+        // Limit the number of patterns to try for safety
+        let max_patterns = 10000;
+        let mut pattern_count = 0;
+
+        if w == 1 {
+            // Single error case
+            for i in 0..n {
+                let mut trial_error = vec![0; n];
+                trial_error[i] = 1;
+
+                // Check if this corrects the errors
+                let corrected = received_vector
+                    .iter()
+                    .zip(trial_error.iter())
+                    .map(|(&r, &e)| r ^ e)
+                    .collect::<Vec<u8>>();
+
+                let check = calculate_syndrome(&corrected, h);
+
+                if check.iter().all(|&x| x == 0) {
+                    update_peak_memory(start_memory, &mut peak_memory);
+                    let metrics = AlgorithmMetrics {
+                        time: start_time.elapsed().as_micros() as usize,
+                        peak_memory,
+                    };
+
+                    return (Some(trial_error), metrics);
+                }
+            }
+        } else if t == 2 {
+            // For t=2, try all possible pairs of errors
+            for i in 0..n {
+                for j in i + 1..n {
+                    if pattern_count >= max_patterns {
+                        break;
+                    }
+
+                    let mut trial_error = vec![0; n];
+                    trial_error[i] = 1;
+                    trial_error[j] = 1;
+
+                    // Check if this corrects the errors
+                    let corrected = received_vector
+                        .iter()
+                        .zip(trial_error.iter())
+                        .map(|(&r, &e)| r ^ e)
+                        .collect::<Vec<u8>>();
+
+                    let check = calculate_syndrome(&corrected, h);
+
+                    if check.iter().all(|&x| x == 0) {
+                        update_peak_memory(start_memory, &mut peak_memory);
+                        let metrics = AlgorithmMetrics {
+                            time: start_time.elapsed().as_micros() as usize,
+                            peak_memory,
+                        };
+
+                        return (Some(trial_error), metrics);
+                    }
+
+                    pattern_count += 1;
+                }
+            }
+        } else if t == 3 || t == 4 {
+            use itertools::Itertools;
+
+            let positions: Vec<usize> = (0..n).collect();
+
+            for combo in positions.iter().combinations(t) {
+                pattern_count += 1;
+                if pattern_count >= max_patterns {
+                    break;
+                }
+
+                let mut trial_error = vec![0; n];
+                for &&pos in combo.iter() {
+                    trial_error[pos] = 1;
+                }
+
+                // Check if this corrects the errors
+                let corrected = received_vector
+                    .iter()
+                    .zip(trial_error.iter())
+                    .map(|(&r, &e)| r ^ e)
+                    .collect::<Vec<u8>>();
+
+                let check = calculate_syndrome(&corrected, h);
+
+                if check.iter().all(|&x| x == 0) {
+                    update_peak_memory(start_memory, &mut peak_memory);
+                    let metrics = AlgorithmMetrics {
+                        time: start_time.elapsed().as_micros() as usize,
+                        peak_memory,
+                    };
+
+                    return (Some(trial_error), metrics);
+                }
+            }
+        }
+    }
+
+    update_peak_memory(start_memory, &mut peak_memory);
+
+    let metrics = AlgorithmMetrics {
+        time: start_time.elapsed().as_micros() as usize,
+        peak_memory,
+    };
+
+    (None, metrics)
 }

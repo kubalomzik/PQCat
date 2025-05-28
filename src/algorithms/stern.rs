@@ -1,5 +1,7 @@
 use crate::algorithms::algorithm_utils::{calculate_syndrome, generate_subsets};
+use crate::algorithms::metrics::{AlgorithmMetrics, start_memory_tracking, update_peak_memory};
 use ndarray::Array2;
+use rand::rng;
 use rand::seq::SliceRandom;
 use std::collections::HashMap;
 use std::time::Instant;
@@ -8,9 +10,13 @@ pub fn run_stern_algorithm(
     received_vector: &[u8],
     h: &Array2<u8>,
     weight: usize,
-) -> Option<Vec<u8>> {
-    let start = Instant::now();
+) -> (Option<Vec<u8>>, AlgorithmMetrics) {
+    let start_time = Instant::now();
+    let start_memory = start_memory_tracking();
+    let mut peak_memory = 0;
 
+    let target_syndrome = calculate_syndrome(received_vector, h);
+    update_peak_memory(start_memory, &mut peak_memory);
     let n = h.shape()[1];
     let m = n / 2 + (n % 2);
 
@@ -20,11 +26,8 @@ pub fn run_stern_algorithm(
     let mut right_indices = indices[m..].to_vec();
 
     // Shuffle to add randomness to bare closer resemblance to the probabilistic nature of Stern's algorithm
-    left_indices.shuffle(&mut rand::thread_rng());
-    right_indices.shuffle(&mut rand::thread_rng());
-
-    // Compute initial syndrome
-    let target_syndrome = calculate_syndrome(received_vector, h);
+    left_indices.shuffle(&mut rng());
+    right_indices.shuffle(&mut rng());
 
     // Create hash maps for subsets
     let mut left_map: HashMap<Vec<u8>, Vec<usize>> = HashMap::new();
@@ -60,21 +63,30 @@ pub fn run_stern_algorithm(
         }
         if let Some(right_subset) = right_map.get(&complement_syndrome) {
             // Combine the subsets to form the error vector
-            let mut error_vector = vec![0; n];
+            let mut candidate_error = vec![0; n];
             for &i in left_subset {
-                error_vector[i] = 1;
+                candidate_error[i] = 1;
             }
             for &i in right_subset {
-                error_vector[i] = 1;
+                candidate_error[i] = 1;
             }
-            let duration = start.elapsed().as_micros();
-            println!("Time: {} μs", duration);
-            return Some(error_vector);
+            update_peak_memory(start_memory, &mut peak_memory);
+
+            let metrics = AlgorithmMetrics {
+                time: start_time.elapsed().as_micros() as usize,
+                peak_memory,
+            };
+
+            return (Some(candidate_error), metrics);
         }
     }
 
-    let duration = start.elapsed().as_micros();
-    println!("Time: {} μs", duration);
+    update_peak_memory(start_memory, &mut peak_memory);
 
-    None
+    let metrics = AlgorithmMetrics {
+        time: start_time.elapsed().as_micros() as usize,
+        peak_memory,
+    };
+
+    (None, metrics)
 }
