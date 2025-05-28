@@ -1,6 +1,6 @@
 use crate::types::FiniteField;
 use rand::seq::SliceRandom;
-use rand::Rng;
+use rand::{Rng, rng};
 use std::cmp::min;
 
 impl FiniteField {
@@ -150,7 +150,7 @@ impl FiniteField {
 
     // Generate a set of distinct field elements
     pub fn random_support(&self, size: usize) -> Vec<u8> {
-        let mut rng = rand::thread_rng();
+        let mut rng = rng();
         let field_size = 1 << self.get_m();
 
         // Make sure we don't request more elements than exist in the field
@@ -176,100 +176,6 @@ pub fn trim_polynomial(poly: &mut Vec<u8>) {
     }
 }
 
-/// Polynomial addition in GF(2^m)
-pub fn polynomial_add(a: &mut Vec<u8>, b: &[u8]) {
-    // Ensure a is at least as long as b
-    if a.len() < b.len() {
-        a.resize(b.len(), 0);
-    }
-
-    // Add coefficients (XOR in binary field)
-    for i in 0..b.len() {
-        a[i] ^= b[i];
-    }
-
-    // Remove leading zeros
-    trim_polynomial(a);
-}
-
-/// Polynomial multiplication in GF(2^m)
-pub fn polynomial_multiply(a: &[u8], b: &[u8], field: &FiniteField) -> Vec<u8> {
-    if a.is_empty() || b.is_empty() {
-        return vec![];
-    }
-
-    let deg_a = a.len() - 1;
-    let deg_b = b.len() - 1;
-    let deg_result = deg_a + deg_b;
-    let mut result = vec![0; deg_result + 1];
-
-    for i in 0..=deg_a {
-        for j in 0..=deg_b {
-            let product = field.field_multiply(a[i], b[j]);
-            result[i + j] ^= product; // XOR since we're in GF(2)
-        }
-    }
-
-    // Remove leading zeros
-    let mut result_mut = result;
-    trim_polynomial(&mut result_mut);
-
-    result_mut
-}
-
-/// Polynomial division in GF(2^m)
-pub fn polynomial_divide(a: &[u8], b: &[u8], field: &FiniteField) -> (Vec<u8>, Vec<u8>) {
-    if b.is_empty() || b.iter().all(|&x| x == 0) {
-        panic!("Division by zero polynomial");
-    }
-
-    // Ensure the leading coefficient is non-zero
-    let mut b_copy = b.to_vec();
-    trim_polynomial(&mut b_copy);
-
-    let mut a_copy = a.to_vec();
-    let deg_a = a_copy.len() - 1;
-    let deg_b = b_copy.len() - 1;
-
-    if deg_a < deg_b {
-        return (vec![], a_copy);
-    }
-
-    let mut quotient = vec![0; deg_a - deg_b + 1];
-    let b_leading = b_copy[deg_b];
-    let b_leading_inv = field.inverse(b_leading);
-
-    for i in (0..=deg_a - deg_b).rev() {
-        if a_copy.len() <= i + deg_b {
-            continue;
-        }
-
-        let coef = field.field_multiply(a_copy[i + deg_b], b_leading_inv);
-        quotient[i] = coef;
-
-        for j in 0..=deg_b {
-            if j + i < a_copy.len() {
-                a_copy[j + i] ^= field.field_multiply(coef, b_copy[j]);
-            }
-        }
-    }
-
-    // Truncate remainder to proper degree
-    trim_polynomial(&mut a_copy);
-
-    (quotient, a_copy)
-}
-
-/// Polynomial modulo operation in GF(2^m)
-pub fn polynomial_mod(a: &mut Vec<u8>, m: &[u8], field: &FiniteField) {
-    if a.len() < m.len() {
-        return;
-    }
-
-    let (_, r) = polynomial_divide(a, m, field);
-    *a = r;
-}
-
 /// Evaluate a polynomial at a point in GF(2^m)
 pub fn evaluate_poly(poly: &[u8], x: u8, field: &FiniteField) -> u8 {
     if x == 0 {
@@ -286,7 +192,7 @@ pub fn evaluate_poly(poly: &[u8], x: u8, field: &FiniteField) -> u8 {
 
 /// Generate a random irreducible polynomial of degree t
 pub fn random_irreducible_poly(t: usize, field: &FiniteField) -> Vec<u8> {
-    let mut rng = rand::thread_rng();
+    let mut rng = rng();
 
     // Create a monic polynomial (highest coefficient is 1)
     let mut poly = vec![0u8; t + 1];
@@ -294,7 +200,7 @@ pub fn random_irreducible_poly(t: usize, field: &FiniteField) -> Vec<u8> {
 
     // Generate random coefficients for the other terms
     for coefficient in poly.iter_mut().take(t) {
-        *coefficient = rng.gen_range(0..(1 << field.get_m())) as u8;
+        *coefficient = rng.random_range(0..(1 << field.get_m())) as u8;
     }
 
     // Ensure the constant term is non-zero for irreducibility
