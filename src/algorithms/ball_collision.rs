@@ -1,8 +1,9 @@
 use crate::algorithms::algorithm_utils::calculate_syndrome;
 use crate::algorithms::config::{LIST_SIZE, MAX_ITERATIONS};
-use crate::algorithms::metrics::{start_memory_tracking, update_peak_memory, AlgorithmMetrics};
+use crate::algorithms::metrics::{AlgorithmMetrics, start_memory_tracking, update_peak_memory};
 use ndarray::Array2;
-use rand::{seq::SliceRandom, thread_rng};
+use rand::prelude::IndexedRandom;
+use rand::{rng, seq::SliceRandom};
 use std::collections::HashMap;
 use std::time::Instant;
 
@@ -23,7 +24,7 @@ pub fn run_ball_collision_algorithm(
     for _iteration in 0..MAX_ITERATIONS {
         // Split indices into two parts
         let mut indices: Vec<usize> = (0..n).collect();
-        indices.shuffle(&mut thread_rng());
+        indices.shuffle(&mut rng());
 
         let half = n / 2;
         let part1: Vec<usize> = indices[0..half].to_vec();
@@ -37,7 +38,7 @@ pub fn run_ball_collision_algorithm(
         let mut list1: HashMap<Vec<u8>, Vec<usize>> = HashMap::new();
         for _ in 0..LIST_SIZE {
             // Select random positions from part1
-            let mut rng = thread_rng();
+            let mut rng = rng();
             let selected_indices = part1
                 .choose_multiple(&mut rng, p1.min(part1.len()))
                 .cloned()
@@ -62,7 +63,7 @@ pub fn run_ball_collision_algorithm(
         // Generate second list and check for collisions
         for _ in 0..LIST_SIZE {
             // Select random positions from part2
-            let mut rng = thread_rng();
+            let mut rng = rng();
             let selected_indices = part2
                 .choose_multiple(&mut rng, p2.min(part2.len()))
                 .cloned()

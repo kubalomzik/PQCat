@@ -1,6 +1,7 @@
 use crate::algorithms::algorithm_utils::{calculate_syndrome, generate_subsets};
-use crate::algorithms::metrics::{start_memory_tracking, update_peak_memory, AlgorithmMetrics};
+use crate::algorithms::metrics::{AlgorithmMetrics, start_memory_tracking, update_peak_memory};
 use ndarray::Array2;
+use rand::rng;
 use rand::seq::SliceRandom;
 use std::collections::HashMap;
 use std::time::Instant;
@@ -25,8 +26,8 @@ pub fn run_stern_algorithm(
     let mut right_indices = indices[m..].to_vec();
 
     // Shuffle to add randomness to bare closer resemblance to the probabilistic nature of Stern's algorithm
-    left_indices.shuffle(&mut rand::thread_rng());
-    right_indices.shuffle(&mut rand::thread_rng());
+    left_indices.shuffle(&mut rng());
+    right_indices.shuffle(&mut rng());
 
     // Create hash maps for subsets
     let mut left_map: HashMap<Vec<u8>, Vec<usize>> = HashMap::new();

@@ -1,7 +1,8 @@
 use crate::algorithms::algorithm_utils::calculate_syndrome;
 use crate::algorithms::config::MAX_ITERATIONS;
-use crate::algorithms::metrics::{start_memory_tracking, update_peak_memory, AlgorithmMetrics};
+use crate::algorithms::metrics::{AlgorithmMetrics, start_memory_tracking, update_peak_memory};
 use ndarray::Array2;
+use rand::rng;
 use rand::seq::SliceRandom;
 use std::time::Instant;
 
@@ -23,7 +24,7 @@ pub fn run_prange_algorithm(
 
     while loop_count < MAX_ITERATIONS {
         // Shuffle and take the first `weight` indices as candidate positions for the error vector
-        indices.shuffle(&mut rand::thread_rng());
+        indices.shuffle(&mut rng());
         let chosen_indices = &indices[..weight];
 
         // Create a candidate error vector

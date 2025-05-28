@@ -4,7 +4,7 @@ use crate::types::GoppaParams;
 use ndarray::s;
 use ndarray::{Array2, Axis};
 use rand::seq::SliceRandom;
-use rand::Rng;
+use rand::{Rng, rng};
 use std::process;
 
 fn handle_code_result<T>(result: Result<T, String>, code_type: &str) -> T {
@@ -49,10 +49,10 @@ pub fn generate_code(
 
 pub fn generate_random_code(n: usize, k: usize) -> Result<(Array2<u8>, Array2<u8>), String> {
     assert!(k < n, "k must be less than n");
-    let mut rng = rand::thread_rng();
+    let mut rng = rng();
     let m = n - k; // Number of parity bits
 
-    let p = Array2::from_shape_fn((k, m), |_| rng.gen_range(0..=1)); // Generate a random (k x m) P matrix
+    let p = Array2::from_shape_fn((k, m), |_| rng.random_range(0..=1)); // Generate a random (k x m) P matrix
 
     let mut g = Array2::<u8>::zeros((k, n)); // Construct G = [I_k | P]
     for i in 0..k {
@@ -168,7 +168,7 @@ pub fn generate_qc_code(n: usize, k: usize) -> Result<(Array2<u8>, Array2<u8>), 
         // Make it sparse for better error correction (typically 2-3 1s per row)
         let ones_per_row = 2.min(p / 2);
         let mut indices: Vec<usize> = (0..p).collect();
-        indices.shuffle(&mut rand::thread_rng());
+        indices.shuffle(&mut rng());
 
         for &idx in indices.iter().take(ones_per_row) {
             first_row[idx] = 1;

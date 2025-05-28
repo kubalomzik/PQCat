@@ -1,7 +1,7 @@
-use crate::algorithms::metrics::{start_memory_tracking, update_peak_memory, AlgorithmMetrics};
+use crate::algorithms::metrics::{AlgorithmMetrics, start_memory_tracking, update_peak_memory};
 use ndarray::{Array1, Array2};
-use rand::{seq::SliceRandom, thread_rng};
-
+use rand::prelude::IndexedRandom;
+use rand::rng;
 use std::collections::HashMap;
 use std::time::Instant;
 
@@ -55,7 +55,7 @@ pub fn run_mmt_algorithm(
         partitions.push((start_idx..end_idx).collect());
     }
 
-    let mut rng = thread_rng();
+    let mut rng = rng();
     let r = h.shape()[0]; // Number of rows in H (syndrome length)
     let syndrome_vec: Vec<u8> = syndrome.iter().copied().collect();
 

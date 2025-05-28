@@ -1,8 +1,9 @@
 use crate::algorithms::algorithm_utils::{calculate_partial_syndrome, calculate_syndrome};
 use crate::algorithms::config::{LIST_SIZE, MAX_ITERATIONS};
-use crate::algorithms::metrics::{start_memory_tracking, update_peak_memory, AlgorithmMetrics};
+use crate::algorithms::metrics::{AlgorithmMetrics, start_memory_tracking, update_peak_memory};
 use ndarray::Array2;
-use rand::{seq::SliceRandom, thread_rng};
+use rand::prelude::IndexedRandom;
+use rand::{rng, seq::SliceRandom};
 use std::collections::HashMap;
 use std::time::Instant;
 
@@ -19,7 +20,7 @@ pub fn run_bjmm_algorithm(
     let target_syndrome = calculate_syndrome(received_vector, h);
     update_peak_memory(start_memory, &mut peak_memory);
     let r = h.shape()[0];
-    let mut rng = thread_rng();
+    let mut rng = rng();
 
     for _iteration in 0..MAX_ITERATIONS {
         // Bring parity check matrix to systematic form (permute columns)
