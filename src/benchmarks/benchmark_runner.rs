@@ -90,29 +90,71 @@ pub fn run_all_qc_tests(algorithm: &str, runs: usize) {
     }
 }
 
-// Run all MMT tests with special parameters
+// TODO: untangle MMT-specific tests so that there's less boilerplate
 pub fn run_all_mmt_tests(runs: usize) {
-    // MMT with Hamming codes
+    run_all_hamming_tests_mmt(runs);
+    run_all_goppa_tests_mmt(runs);
+    run_all_qc_tests_mmt(runs);
+}
+
+pub fn run_all_hamming_tests_mmt(runs: usize) {
+    // Test 1: Scaling code size
     for i in 0..4 {
-        let params = [(7, 4, 1), (15, 11, 1), (31, 26, 1), (63, 57, 1)];
-        let (n, k, w) = params[i];
-        let config = BenchmarkConfig::mmt_config(n, k, w, "hamming").with_runs(runs);
+        let config = BenchmarkConfig::hamming_scaling_size(i)
+            .with_algorithm("mmt")
+            .with_runs(runs)
+            .with_mmt_params(2, 256, 256); // Default MMT parameters
         run_benchmark(config);
     }
 
-    // MMT with Goppa codes
+    // Test 2: Scaling error weight
     for i in 0..4 {
-        let params = [(16, 10, 2), (32, 22, 2), (64, 52, 2), (128, 112, 2)];
-        let (n, k, w) = params[i];
-        let config = BenchmarkConfig::mmt_config(n, k, w, "goppa").with_runs(runs);
+        let config = BenchmarkConfig::hamming_scaling_weight(i)
+            .with_algorithm("mmt")
+            .with_runs(runs)
+            .with_mmt_params(2, 256, 256); // Default MMT parameters
+        run_benchmark(config);
+    }
+}
+
+// MMT-specific version of Goppa tests that includes MMT parameters
+pub fn run_all_goppa_tests_mmt(runs: usize) {
+    // Test 1: Scaling code size
+    for i in 0..4 {
+        let config = BenchmarkConfig::goppa_scaling_size(i)
+            .with_algorithm("mmt")
+            .with_runs(runs)
+            .with_mmt_params(2, 256, 256); // Default MMT parameters
         run_benchmark(config);
     }
 
-    // MMT with Quasi-Cyclic codes
+    // Test 2: Scaling error correction capability
     for i in 0..4 {
-        let params = [(30, 20, 2), (60, 40, 2), (90, 60, 2), (120, 80, 2)];
-        let (n, k, w) = params[i];
-        let config = BenchmarkConfig::mmt_config(n, k, w, "qc").with_runs(runs);
+        let config = BenchmarkConfig::goppa_scaling_weight(i)
+            .with_algorithm("mmt")
+            .with_runs(runs)
+            .with_mmt_params(2, 256, 256); // Default MMT parameters
+        run_benchmark(config);
+    }
+}
+
+// MMT-specific version of QC tests that includes MMT parameters
+pub fn run_all_qc_tests_mmt(runs: usize) {
+    // Test 1: Scaling code size
+    for i in 0..4 {
+        let config = BenchmarkConfig::qc_scaling_size(i)
+            .with_algorithm("mmt")
+            .with_runs(runs)
+            .with_mmt_params(2, 256, 256); // Default MMT parameters
+        run_benchmark(config);
+    }
+
+    // Test 2: Scaling error weight
+    for i in 0..4 {
+        let config = BenchmarkConfig::qc_scaling_weight(i)
+            .with_algorithm("mmt")
+            .with_runs(runs)
+            .with_mmt_params(2, 256, 256); // Default MMT parameters
         run_benchmark(config);
     }
 }

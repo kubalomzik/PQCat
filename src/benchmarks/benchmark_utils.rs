@@ -30,12 +30,14 @@ pub fn extract_memory(output: &str) -> Option<u64> {
 pub fn ensure_results_directory() {
     if !Path::new("./results").exists() {
         fs::create_dir("./results").expect("Failed to create results directory");
+        fs::create_dir("./results/txt").expect("Failed to create txt directory");
+        fs::create_dir("./results/csv").expect("Failed to create csv directory");
     }
 }
 
 pub fn create_output_files(config: &BenchmarkConfig) -> (Writer<File>, String) {
     let csv_path = format!(
-        "./results/{}_{}_n{}_k{}_w{}.csv",
+        "./results/csv/{}_{}_n{}_k{}_w{}.csv",
         &config.algorithm_name, &config.code_type, config.n, config.k, config.w
     );
 
@@ -47,7 +49,7 @@ pub fn create_output_files(config: &BenchmarkConfig) -> (Writer<File>, String) {
         .expect("Failed to write CSV headers");
 
     let txt_filename = format!(
-        "./results/{}_{}_n{}_k{}_w{}.txt",
+        "./results/txt/{}_{}_n{}_k{}_w{}.txt",
         &config.algorithm_name, &config.code_type, config.n, config.k, config.w
     );
 

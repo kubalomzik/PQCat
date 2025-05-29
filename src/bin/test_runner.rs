@@ -1,7 +1,7 @@
-use pqcat::benchmarks::benchmark_runner::run_all_goppa_tests;
 #[allow(unused_imports)]
 use pqcat::benchmarks::benchmark_runner::{
-    run_all_benchmarks, run_all_hamming_tests, run_all_tests_for_algorithm, run_benchmark,
+    run_all_benchmarks, run_all_goppa_tests, run_all_hamming_tests, run_all_mmt_tests,
+    run_all_qc_tests, run_all_tests_for_algorithm, run_benchmark,
 };
 #[allow(unused_imports)]
 use pqcat::types::BenchmarkConfig;
