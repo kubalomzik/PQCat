@@ -23,8 +23,6 @@ pub fn run_benchmark(config: BenchmarkConfig) {
 
 #[allow(dead_code)]
 pub fn run_all_tests_for_algorithm(algorithm: &str, runs: usize) {
-    println!("Running all tests for algorithm: {}", algorithm);
-
     // Skip incompatible algorithm-code combinations
     match algorithm {
         "patterson" => run_all_goppa_tests(algorithm, runs),
@@ -39,8 +37,6 @@ pub fn run_all_tests_for_algorithm(algorithm: &str, runs: usize) {
 }
 
 pub fn run_all_hamming_tests(algorithm: &str, runs: usize) {
-    println!("Running Hamming code tests for {}", algorithm);
-
     // Test 1: Scaling code size
     for i in 0..4 {
         let config = BenchmarkConfig::hamming_scaling_size(i)
@@ -59,8 +55,6 @@ pub fn run_all_hamming_tests(algorithm: &str, runs: usize) {
 }
 
 pub fn run_all_goppa_tests(algorithm: &str, runs: usize) {
-    println!("Running Goppa code tests for {}", algorithm);
-
     // Test 1: Scaling code size
     for i in 0..4 {
         let config = BenchmarkConfig::goppa_scaling_size(i)
@@ -79,8 +73,6 @@ pub fn run_all_goppa_tests(algorithm: &str, runs: usize) {
 }
 
 pub fn run_all_qc_tests(algorithm: &str, runs: usize) {
-    println!("Running Quasi-Cyclic code tests for {}", algorithm);
-
     // Test 1: Scaling code size
     for i in 0..4 {
         let config = BenchmarkConfig::qc_scaling_size(i)
@@ -100,8 +92,6 @@ pub fn run_all_qc_tests(algorithm: &str, runs: usize) {
 
 // Run all MMT tests with special parameters
 pub fn run_all_mmt_tests(runs: usize) {
-    println!("Running MMT tests with special parameters");
-
     // MMT with Hamming codes
     for i in 0..4 {
         let params = [(7, 4, 1), (15, 11, 1), (31, 26, 1), (63, 57, 1)];

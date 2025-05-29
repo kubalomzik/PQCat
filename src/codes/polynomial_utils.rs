@@ -1,7 +1,5 @@
 use crate::types::FiniteField;
-use rand::seq::SliceRandom;
 use rand::{Rng, rng};
-use std::cmp::min;
 
 impl FiniteField {
     // Create a new finite field GF(2^m) with an irreducible polynomial
@@ -146,22 +144,6 @@ impl FiniteField {
         }
 
         t0 as u8
-    }
-
-    // Generate a set of distinct field elements
-    pub fn random_support(&self, size: usize) -> Vec<u8> {
-        let mut rng = rng();
-        let field_size = 1 << self.get_m();
-
-        // Make sure we don't request more elements than exist in the field
-        let real_size = min(size, field_size - 1);
-
-        // Generate all non-zero field elements
-        let mut all_elements: Vec<u8> = (1..field_size as u8).collect();
-        all_elements.shuffle(&mut rng);
-
-        // Take the first 'real_size' elements
-        all_elements[0..real_size].to_vec()
     }
 }
 

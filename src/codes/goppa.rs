@@ -1,63 +1,87 @@
 use crate::codes::polynomial_utils::{evaluate_poly, random_irreducible_poly};
 use crate::types::FiniteField;
 use ndarray::Array2;
+use rand::rng;
+use rand::seq::SliceRandom;
 
-/// Helper function for creating valid Goppa code parameters
 pub fn generate_valid_goppa_params(n: usize, t: usize) -> (Vec<u8>, Vec<u8>, FiniteField) {
     let m = (n as f64).log2().ceil() as u8;
     let field = FiniteField::new(m);
 
-    // Generate Goppa polynomial and support
-    let mut goppa_poly = random_irreducible_poly(t, &field);
-    let mut support = field.random_support(n);
+    // Check if n is too close to maximum support size
+    let max_support_size = (1 << m) - 1; // 2^m - 1 (excluding zero)
 
-    // Validate: ensure no support element is a root of the Goppa polynomial
-    let mut retry_count = 0;
-    const MAX_RETRIES: usize = 10;
+    // Special case: For t=1, a full support is impossible (linear polynomial must have 1 root)
+    if t == 1 && n == max_support_size {
+        return generate_valid_goppa_params(max_support_size - 1, t);
+    }
 
-    while retry_count < MAX_RETRIES {
-        let mut has_root_in_support = false;
+    if n > max_support_size {
+        return generate_valid_goppa_params(max_support_size, t);
+    }
 
-        for &x in &support {
-            let g_x = evaluate_poly(&goppa_poly, x, &field);
-            if g_x == 0 {
-                has_root_in_support = true;
-                break;
+    // For safety with nearly-full support (like n=63 in GF(2^6)), ensure our Goppa polynomial has minimal roots in the field
+    let mut best_poly = Vec::new();
+    let mut min_roots = max_support_size;
+
+    // Try more polynomials for larger field sizes or when we need a nearly-full support
+    let attempts = if n > max_support_size - 10 { 20 } else { 10 }; // Increased attempts
+
+    // Try multiple polynomials and choose the one with fewest roots
+    for _ in 0..attempts {
+        let poly = random_irreducible_poly(t, &field);
+        let mut root_count = 0;
+
+        for x in 1..(1 << m) {
+            if evaluate_poly(&poly, x as u8, &field) == 0 {
+                root_count += 1;
             }
         }
 
-        if !has_root_in_support {
-            // Valid combination found
-            return (goppa_poly, support, field);
-        }
+        if root_count < min_roots {
+            min_roots = root_count;
+            best_poly = poly.clone();
 
-        // Try again with a new polynomial
-        goppa_poly = random_irreducible_poly(t, &field);
-        retry_count += 1;
-    }
-
-    // If we're still having issues after several retries, regenerate both
-    goppa_poly = random_irreducible_poly(t, &field);
-    support = field.random_support(n);
-
-    // Final validation - in extreme cases, we just ensure individual elements work
-    let mut valid_support = Vec::with_capacity(n);
-    for &x in &support {
-        let g_x = evaluate_poly(&goppa_poly, x, &field);
-        if g_x != 0 {
-            valid_support.push(x);
-            if valid_support.len() >= n {
+            // If we found a polynomial with few enough roots, use it
+            if root_count <= max_support_size - n {
                 break;
             }
         }
     }
 
-    // If we couldn't find enough valid support elements
-    if valid_support.len() < n {
-        panic!("Couldn't generate valid Goppa code parameters after multiple attempts");
+    // If our best polynomial still has too many roots to create a support of size n
+    if min_roots > max_support_size - n {
+        let adjusted_n = max_support_size - min_roots;
+        // If we can't create a support of reasonable size, try a different t value
+        if adjusted_n < n / 2 && t > 1 {
+            return generate_valid_goppa_params(n, t - 1);
+        }
+
+        return generate_valid_goppa_params(adjusted_n, t);
     }
 
-    (goppa_poly, valid_support, field)
+    // Identify all non-roots to build our support from
+    let mut non_roots = Vec::with_capacity(max_support_size);
+    for x in 1..(1 << m) {
+        let x_byte = x as u8;
+        if evaluate_poly(&best_poly, x_byte, &field) != 0 {
+            non_roots.push(x_byte);
+        }
+    }
+
+    if non_roots.len() < n {
+        // Instead of panicking, adjust n to the number of non-roots we found
+        return generate_valid_goppa_params(non_roots.len(), t);
+    }
+
+    // Shuffle the non-roots to get a random support
+    let mut rng = rng();
+    non_roots.shuffle(&mut rng);
+
+    // Take the first n elements as our support
+    let valid_support = non_roots[0..n].to_vec();
+
+    (best_poly, valid_support, field)
 }
 
 pub fn generate_goppa_parity_matrix(
@@ -67,21 +91,35 @@ pub fn generate_goppa_parity_matrix(
     support: &[u8],
     field: &FiniteField,
 ) -> Array2<u8> {
+    // Verify that support has enough elements
+    if support.len() < n {
+        panic!(
+            "Support vector too small: has {} elements but need {}",
+            support.len(),
+            n
+        );
+    }
+
     // The parity check matrix for a binary Goppa code has t*m rows
     let m = field.get_m() as usize;
     let mut h = Array2::<u8>::zeros((t * m, n));
 
     for j in 0..n {
         // For each support element L[j]
-        let l_j = support[j];
+        let l_j = support[j]; // This is safe now that we check support.len() >= n
 
         // Calculate g(L[j])
         let g_l_j = evaluate_poly(goppa_poly, l_j, field);
 
+        // Ensure g(L[j]) is not zero
+        if g_l_j == 0 {
+            panic!("Invalid support: g(L[{}])=0", j);
+        }
+
         // Calculate 1/g(L[j])
         let inv_g_l_j = field.inverse(g_l_j);
 
-        // Generate the column with format [L[j]^(t-1)/g(L[j]), ..., L[j]/g(L[j]), 1/g(L[j])]
+        // Generate the column
         let mut power = 1u8; // Start with L[j]^0 = 1
 
         for i in 0..t {
