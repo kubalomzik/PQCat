@@ -19,4 +19,10 @@ pub mod codes {
     pub mod polynomial_utils;
 }
 
+pub mod benchmarks {
+    pub mod benchmark_runner;
+    pub mod benchmark_utils;
+    pub mod config;
+}
+
 pub mod types;

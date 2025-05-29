@@ -4,12 +4,14 @@ PQCat (Post-Quantum Cryptography Classical Attack Tool) is a Rust-based framewor
 
 - **Prange's Algorithm**
 - **Stern's Algorithm**
-- **Lee-Brickell Algorithm**
+- **Lee-Brickell's Algorithm**
 - **Ball Collision Decoding**
-- **May-Meurer-Thomae (MMT) Algorithm**
+- **May-Meurer-Thomae's (MMT) Algorithm**
+- **Becker-Joux-May-Meurer's (BJMM) Algorithm**
+- **Patterson's Algorithm**
 
-The tool allows users to experiment with parameters, visualize results, and analyze performance characteristics such as execution time and decoding success.
-In its current state it's able to handle random linear codes, Hamming and Goppa codes. Specific input values for these codes can be provided as parameters.
+The tool allows users to experiment with parameters, visualize results, and analyze performance characteristics such as execution time, memory usage and decoding success.
+In its current state it's able to handle random linear codes, Hamming, Goppa and quasi-cyclic (QC) codes. Specific input values for these codes can be provided as parameters.
 
 ## Setup
 
@@ -39,3 +41,6 @@ In its current state it's able to handle random linear codes, Hamming and Goppa 
     For example:
 
    ```pqcat stern --n 7 --k 4 --w 1 --code-type hamming```
+
+   - In order to use the bulk test/benchmark runner:
+   ```./target/release/test_runner```

@@ -1,6 +1,7 @@
 use clap::{Parser, Subcommand};
 mod algorithm_runner;
 mod algorithms;
+mod benchmarks;
 mod code_generator;
 mod codes;
 mod types;

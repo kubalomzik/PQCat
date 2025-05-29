@@ -37,3 +37,46 @@ impl Default for PartitionParams {
         }
     }
 }
+
+pub struct BenchmarkConfig {
+    pub runs: usize,
+    pub algorithm_name: String,
+    pub n: usize,
+    pub k: usize,
+    pub w: usize,
+    pub code_type: String,
+    // Optional parameters only for MMT
+    pub p: Option<usize>,
+    pub l1: Option<usize>,
+    pub l2: Option<usize>,
+}
+
+impl Default for BenchmarkConfig {
+    fn default() -> Self {
+        Self {
+            runs: 100,
+            algorithm_name: "prange".to_string(),
+            n: 15,
+            k: 11,
+            w: 1,
+            code_type: "hamming".to_string(),
+            p: None,
+            l1: None,
+            l2: None,
+        }
+    }
+}
+
+pub struct BenchmarkResult {
+    pub duration: u64,
+    pub memory: u64,
+    pub success: bool,
+}
+
+pub struct BenchmarkStats {
+    pub avg_time: f64,
+    pub avg_memory: f64,
+    pub success_rate: f64,
+    pub successful_runs: usize,
+    pub completed_runs: usize,
+}
