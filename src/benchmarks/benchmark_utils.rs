@@ -28,16 +28,17 @@ pub fn extract_memory(output: &str) -> Option<u64> {
 }
 
 pub fn ensure_results_directory() {
-    if !Path::new("./results").exists() {
-        fs::create_dir("./results").expect("Failed to create results directory");
-        fs::create_dir("./results/txt").expect("Failed to create txt directory");
-        fs::create_dir("./results/csv").expect("Failed to create csv directory");
+    if !Path::new("./results_practical").exists() {
+        fs::create_dir("./results_practical")
+            .expect("Failed to create results_practical directory");
+        fs::create_dir("./results_practical/txt").expect("Failed to create txt directory");
+        fs::create_dir("./results_practical/csv").expect("Failed to create csv directory");
     }
 }
 
 pub fn create_output_files(config: &BenchmarkConfig) -> (Writer<File>, String) {
     let csv_path = format!(
-        "./results/csv/{}_{}_n{}_k{}_w{}.csv",
+        "./results_practical/csv/{}_{}_n{}_k{}_w{}.csv",
         &config.algorithm_name, &config.code_type, config.n, config.k, config.w
     );
 
@@ -49,7 +50,7 @@ pub fn create_output_files(config: &BenchmarkConfig) -> (Writer<File>, String) {
         .expect("Failed to write CSV headers");
 
     let txt_filename = format!(
-        "./results/txt/{}_{}_n{}_k{}_w{}.txt",
+        "./results_practical/txt/{}_{}_n{}_k{}_w{}.txt",
         &config.algorithm_name, &config.code_type, config.n, config.k, config.w
     );
 
@@ -156,21 +157,41 @@ pub fn calculate_statistics(results: &[BenchmarkResult]) -> BenchmarkStats {
 
     if completed_runs == 0 {
         return BenchmarkStats {
-            avg_time: 0.0,
-            avg_memory: 0.0,
+            median_time: 0.0,
+            median_memory: 0.0,
             success_rate: 0.0,
             successful_runs: 0,
             completed_runs: 0,
         };
     }
 
-    let total_time: u64 = results.iter().map(|r| r.duration).sum();
-    let total_memory: u64 = results.iter().map(|r| r.memory).sum();
+    // Extract and sort durations and memory values
+    let mut durations: Vec<u64> = results.iter().map(|r| r.duration).collect();
+    let mut memories: Vec<u64> = results.iter().map(|r| r.memory).collect();
+
+    durations.sort();
+    memories.sort();
+
+    // Calculate medians
+    let median_time = if completed_runs % 2 == 0 {
+        let mid = completed_runs / 2;
+        (durations[mid - 1] + durations[mid]) as f64 / 2.0
+    } else {
+        durations[completed_runs / 2] as f64
+    };
+
+    let median_memory = if completed_runs % 2 == 0 {
+        let mid = completed_runs / 2;
+        (memories[mid - 1] + memories[mid]) as f64 / 2.0
+    } else {
+        memories[completed_runs / 2] as f64
+    };
+
     let successful_runs = results.iter().filter(|r| r.success).count();
 
     BenchmarkStats {
-        avg_time: total_time as f64 / completed_runs as f64,
-        avg_memory: total_memory as f64 / completed_runs as f64,
+        median_time,
+        median_memory,
         success_rate: (successful_runs as f64 / completed_runs as f64) * 100.0,
         successful_runs,
         completed_runs,
@@ -201,8 +222,8 @@ pub fn write_results_to_file(
         stats.completed_runs, config.runs
     )
     .unwrap();
-    writeln!(txt_file, "Avg Time: {:.2} μs", stats.avg_time).unwrap();
-    writeln!(txt_file, "Avg Memory: {:.2} KiB", stats.avg_memory).unwrap();
+    writeln!(txt_file, "Median Time: {:.2} μs", stats.median_time).unwrap();
+    writeln!(txt_file, "Median Memory: {:.2} KiB", stats.median_memory).unwrap();
     writeln!(
         txt_file,
         "Success Rate: {:.2}% ({} of {} runs)",
@@ -218,8 +239,8 @@ pub fn print_summary(config: &BenchmarkConfig, stats: &BenchmarkStats) {
         "Code: {} (n={}, k={}, w={})",
         config.code_type, config.n, config.k, config.w
     );
-    println!("Avg Time: {:.2} μs", stats.avg_time);
-    println!("Avg Memory: {:.2} KiB", stats.avg_memory);
+    println!("Median Time: {:.2} μs", stats.median_time);
+    println!("Median Memory: {:.2} KiB", stats.median_memory);
     println!(
         "Success Rate: {:.2}% ({}/{})\n\n",
         stats.success_rate, stats.successful_runs, stats.completed_runs

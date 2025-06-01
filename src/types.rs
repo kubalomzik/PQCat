@@ -2,14 +2,14 @@
 #[derive(Clone)]
 pub struct FiniteField {
     pub m: u8,     // Extension degree (field is GF(2^m))
-    pub poly: u16, // Irreducible polynomial represented as a bit pattern
+    pub poly: u32, // Irreducible polynomial represented as a bit pattern
 }
 
 #[derive(Clone)]
 pub struct GoppaParams {
     pub field: FiniteField,
-    pub goppa_poly: Vec<u8>,
-    pub support: Vec<u8>,
+    pub goppa_poly: Vec<u32>,
+    pub support: Vec<u32>,
     pub t: usize,
 }
 
@@ -74,8 +74,8 @@ pub struct BenchmarkResult {
 }
 
 pub struct BenchmarkStats {
-    pub avg_time: f64,
-    pub avg_memory: f64,
+    pub median_time: f64,
+    pub median_memory: f64,
     pub success_rate: f64,
     pub successful_runs: usize,
     pub completed_runs: usize,

@@ -4,7 +4,7 @@ use ndarray::Array2;
 use rand::rng;
 use rand::seq::SliceRandom;
 
-pub fn generate_valid_goppa_params(n: usize, t: usize) -> (Vec<u8>, Vec<u8>, FiniteField) {
+pub fn generate_valid_goppa_params(n: usize, t: usize) -> (Vec<u32>, Vec<u32>, FiniteField) {
     let m = (n as f64).log2().ceil() as u8;
     let field = FiniteField::new(m);
 
@@ -33,7 +33,7 @@ pub fn generate_valid_goppa_params(n: usize, t: usize) -> (Vec<u8>, Vec<u8>, Fin
         let mut root_count = 0;
 
         for x in 1..(1 << m) {
-            if evaluate_poly(&poly, x as u8, &field) == 0 {
+            if evaluate_poly(&poly, x as u32, &field) == 0 {
                 root_count += 1;
             }
         }
@@ -63,7 +63,7 @@ pub fn generate_valid_goppa_params(n: usize, t: usize) -> (Vec<u8>, Vec<u8>, Fin
     // Identify all non-roots to build our support from
     let mut non_roots = Vec::with_capacity(max_support_size);
     for x in 1..(1 << m) {
-        let x_byte = x as u8;
+        let x_byte = x as u32;
         if evaluate_poly(&best_poly, x_byte, &field) != 0 {
             non_roots.push(x_byte);
         }
@@ -87,8 +87,8 @@ pub fn generate_valid_goppa_params(n: usize, t: usize) -> (Vec<u8>, Vec<u8>, Fin
 pub fn generate_goppa_parity_matrix(
     n: usize,
     t: usize,
-    goppa_poly: &[u8],
-    support: &[u8],
+    goppa_poly: &[u32],
+    support: &[u32],
     field: &FiniteField,
 ) -> Array2<u8> {
     // Verify that support has enough elements
@@ -120,14 +120,14 @@ pub fn generate_goppa_parity_matrix(
         let inv_g_l_j = field.inverse(g_l_j);
 
         // Generate the column
-        let mut power = 1u8; // Start with L[j]^0 = 1
+        let mut power = 1u32; // Start with L[j]^0 = 1
 
         for i in 0..t {
             let col_val = field.field_multiply(power, inv_g_l_j);
 
             // Convert to binary and place in the appropriate rows
             for bit in 0..m {
-                h[[i * m + bit, j]] = (col_val >> bit) & 1;
+                h[[i * m + bit, j]] = ((col_val >> bit) & 1) as u8;
             }
 
             // Calculate next power

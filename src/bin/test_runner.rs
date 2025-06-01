@@ -1,7 +1,7 @@
 #[allow(unused_imports)]
 use pqcat::benchmarks::benchmark_runner::{
     run_all_benchmarks, run_all_goppa_tests, run_all_hamming_tests, run_all_mmt_tests,
-    run_all_qc_tests, run_all_tests_for_algorithm, run_benchmark,
+    run_all_qc_tests, run_all_tests_for_algorithm, run_benchmark, run_real_world_test,
 };
 #[allow(unused_imports)]
 use pqcat::types::BenchmarkConfig;
@@ -23,5 +23,11 @@ fn main() {
     // Option 4: Run everything
     // run_all_benchmarks(100);
 
-    run_all_goppa_tests("prange", 10);
+    // Option 5: Run real-world parameters (more in-line with practical use cases) for specific algorithms
+    // run_real_world_test("prange", 100); - or combine with e.g. option 3 to run for multiple chose algorithms
+
+    let algorithms = ["bjmm"];
+    for &alg in &algorithms {
+        run_real_world_test(alg, 1);
+    }
 }

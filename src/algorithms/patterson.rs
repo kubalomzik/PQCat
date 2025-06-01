@@ -9,11 +9,11 @@ use std::time::Instant;
 /// Compute the syndrome polynomial S(z)
 fn compute_syndrome_polynomial(
     received: &[u8],
-    support: &[u8],
-    goppa_poly: &[u8],
+    support: &[u32],
+    goppa_poly: &[u32],
     field: &FiniteField,
     n: usize,
-) -> Vec<u8> {
+) -> Vec<u32> {
     let t = goppa_poly.len() - 1;
     let mut syndrome = vec![0; t];
 
@@ -46,14 +46,14 @@ fn compute_syndrome_polynomial(
 }
 
 /// Find the error locator polynomial using the Berlekamp-Massey algorithm
-fn berlekamp_massey(syndrome: &[u8], field: &FiniteField, t: usize) -> Vec<u8> {
+fn berlekamp_massey(syndrome: &[u32], field: &FiniteField, t: usize) -> Vec<u32> {
     // Ensure syndrome has length 2t
     let mut syndrome_seq = syndrome.to_vec();
     if syndrome_seq.len() < 2 * t {
         syndrome_seq.resize(2 * t, 0);
     }
 
-    let mut connection_poly: Vec<u8> = vec![1]; // Connection polynomial (sigma)
+    let mut connection_poly: Vec<u32> = vec![1]; // Connection polynomial (sigma)
     let mut prev_connection_poly = vec![1]; // Previous connection polynomial
     let mut lfsr_length = 0; // Current length of LFSR
     let mut last_discrepancy = 1; // Scalar factor
@@ -160,7 +160,7 @@ fn berlekamp_massey(syndrome: &[u8], field: &FiniteField, t: usize) -> Vec<u8> {
 }
 
 /// Find the roots of sigma polynomial
-fn find_roots(sigma: &[u8], support: &[u8], field: &FiniteField, n: usize) -> Vec<usize> {
+fn find_roots(sigma: &[u32], support: &[u32], field: &FiniteField, n: usize) -> Vec<usize> {
     let mut error_positions = Vec::new();
 
     // Check if polynomial is valid
@@ -186,7 +186,7 @@ fn find_roots(sigma: &[u8], support: &[u8], field: &FiniteField, n: usize) -> Ve
     error_positions
 }
 
-fn evaluate_poly_horner(poly: &[u8], x: u8, field: &FiniteField) -> u8 {
+fn evaluate_poly_horner(poly: &[u32], x: u32, field: &FiniteField) -> u32 {
     let mut result = 0;
     for &coef in poly.iter().rev() {
         result = field.field_add(field.field_multiply(result, x), coef);

@@ -177,3 +177,19 @@ pub fn run_all_benchmarks(runs: usize) {
     // Run MMT separately
     run_all_mmt_tests(runs);
 }
+
+#[allow(dead_code)]
+pub fn run_real_world_test(algorithm: &str, runs: usize) {
+    for i in 0..2 {
+        // Just test first two levels as higher ones might be too slow
+        let config = BenchmarkConfig::real_world_goppa(i)
+            .with_algorithm(algorithm)
+            .with_runs(runs);
+        run_benchmark(config);
+
+        let config = BenchmarkConfig::real_world_qc(i)
+            .with_algorithm(algorithm)
+            .with_runs(runs);
+        run_benchmark(config);
+    }
+}
