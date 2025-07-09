@@ -23,4 +23,6 @@ Cargo.lock
 # Added by cargo
 
 /target
-/results
+/results_theoretical
+/results_practical
+/results_additional
