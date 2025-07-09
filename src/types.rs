@@ -79,4 +79,8 @@ pub struct BenchmarkStats {
     pub success_rate: f64,
     pub successful_runs: usize,
     pub completed_runs: usize,
+    pub time_ci_lower: f64,
+    pub time_ci_upper: f64,
+    pub memory_ci_lower: f64,
+    pub memory_ci_upper: f64,
 }

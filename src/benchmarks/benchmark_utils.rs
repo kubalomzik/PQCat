@@ -28,17 +28,17 @@ pub fn extract_memory(output: &str) -> Option<u64> {
 }
 
 pub fn ensure_results_directory() {
-    if !Path::new("./results_practical").exists() {
-        fs::create_dir("./results_practical")
-            .expect("Failed to create results_practical directory");
-        fs::create_dir("./results_practical/txt").expect("Failed to create txt directory");
-        fs::create_dir("./results_practical/csv").expect("Failed to create csv directory");
+    if !Path::new("./results").exists() {
+        fs::create_dir("./results")
+            .expect("Failed to create results directory");
+        fs::create_dir("./results/txt").expect("Failed to create txt directory");
+        fs::create_dir("./results/csv").expect("Failed to create csv directory");
     }
 }
 
 pub fn create_output_files(config: &BenchmarkConfig) -> (Writer<File>, String) {
     let csv_path = format!(
-        "./results_practical/csv/{}_{}_n{}_k{}_w{}.csv",
+        "./results/csv/{}_{}_n{}_k{}_w{}.csv",
         &config.algorithm_name, &config.code_type, config.n, config.k, config.w
     );
 
@@ -50,7 +50,7 @@ pub fn create_output_files(config: &BenchmarkConfig) -> (Writer<File>, String) {
         .expect("Failed to write CSV headers");
 
     let txt_filename = format!(
-        "./results_practical/txt/{}_{}_n{}_k{}_w{}.txt",
+        "./results/txt/{}_{}_n{}_k{}_w{}.txt",
         &config.algorithm_name, &config.code_type, config.n, config.k, config.w
     );
 
@@ -162,6 +162,10 @@ pub fn calculate_statistics(results: &[BenchmarkResult]) -> BenchmarkStats {
             success_rate: 0.0,
             successful_runs: 0,
             completed_runs: 0,
+            time_ci_lower: 0.0,
+            time_ci_upper: 0.0,
+            memory_ci_lower: 0.0,
+            memory_ci_upper: 0.0,
         };
     }
 
@@ -187,6 +191,28 @@ pub fn calculate_statistics(results: &[BenchmarkResult]) -> BenchmarkStats {
         memories[completed_runs / 2] as f64
     };
 
+    // Calculate 95% confidence interval indices
+    // For sample size n, approximately positions n/2 ± 1.96*sqrt(n)/2
+    let lower_idx = (completed_runs / 2)
+        .saturating_sub((1.96 * (completed_runs as f64).sqrt() / 2.0).round() as usize);
+
+    let upper_idx = std::cmp::min(
+        completed_runs / 2 + (1.96 * (completed_runs as f64).sqrt() / 2.0).round() as usize,
+        completed_runs - 1,
+    );
+
+    // For exactly 100 runs, this would be indices 40 and 60 (0-indexed)
+    let time_ci_lower = durations[lower_idx] as f64;
+    let time_ci_upper = durations[upper_idx] as f64;
+    let memory_ci_lower = memories[lower_idx] as f64;
+    let memory_ci_upper = memories[upper_idx] as f64;
+
+    // Calculate differences for error bars
+    let time_ci_lower_diff = median_time - time_ci_lower;
+    let time_ci_upper_diff = time_ci_upper - median_time;
+    let memory_ci_lower_diff = median_memory - memory_ci_lower;
+    let memory_ci_upper_diff = memory_ci_upper - median_memory;
+
     let successful_runs = results.iter().filter(|r| r.success).count();
 
     BenchmarkStats {
@@ -195,6 +221,10 @@ pub fn calculate_statistics(results: &[BenchmarkResult]) -> BenchmarkStats {
         success_rate: (successful_runs as f64 / completed_runs as f64) * 100.0,
         successful_runs,
         completed_runs,
+        time_ci_lower: time_ci_lower_diff,
+        time_ci_upper: time_ci_upper_diff,
+        memory_ci_lower: memory_ci_lower_diff,
+        memory_ci_upper: memory_ci_upper_diff,
     }
 }
 
@@ -222,8 +252,18 @@ pub fn write_results_to_file(
         stats.completed_runs, config.runs
     )
     .unwrap();
-    writeln!(txt_file, "Median Time: {:.2} μs", stats.median_time).unwrap();
-    writeln!(txt_file, "Median Memory: {:.2} KiB", stats.median_memory).unwrap();
+    writeln!(
+        txt_file,
+        "Median Time: {:.2} μs (95% CI: {:.2} - {:.2})",
+        stats.median_time, stats.time_ci_lower, stats.time_ci_upper
+    )
+    .unwrap();
+    writeln!(
+        txt_file,
+        "Median Memory: {:.2} KiB (95% CI: {:.2} - {:.2})",
+        stats.median_memory, stats.memory_ci_lower, stats.memory_ci_upper
+    )
+    .unwrap();
     writeln!(
         txt_file,
         "Success Rate: {:.2}% ({} of {} runs)",
@@ -239,8 +279,14 @@ pub fn print_summary(config: &BenchmarkConfig, stats: &BenchmarkStats) {
         "Code: {} (n={}, k={}, w={})",
         config.code_type, config.n, config.k, config.w
     );
-    println!("Median Time: {:.2} μs", stats.median_time);
-    println!("Median Memory: {:.2} KiB", stats.median_memory);
+    println!(
+        "Median Time: {:.2} μs (95% CI: {:.2} - {:.2})",
+        stats.median_time, stats.time_ci_lower, stats.time_ci_upper
+    );
+    println!(
+        "Median Memory: {:.2} KiB (95% CI: {:.2} - {:.2})",
+        stats.median_memory, stats.memory_ci_lower, stats.memory_ci_upper
+    );
     println!(
         "Success Rate: {:.2}% ({}/{})\n\n",
         stats.success_rate, stats.successful_runs, stats.completed_runs

@@ -128,13 +128,13 @@ impl BenchmarkConfig {
     // Real-world Goppa parameters (adjusted for field size and constraints)
     pub fn real_world_goppa(security_level: usize) -> Self {
         let params = [
-            (2047, 1695, 27),  // ~80-bit classical security (k reduced)
-            (3487, 2719, 64),  // ~128-bit classical / NIST Level 1 (k reduced by 1)
-            (4095, 3359, 96),  // ~192-bit classical / NIST Level 3 (k reduced)
-            (6939, 5412, 119), // ~256-bit classical / NIST Level 5 (k reduced)
+            (2047, 1695, 27),  // ~80-bit classical security (reduced)
+            (3487, 2719, 64),  // ~128-bit classical / NIST Level 1 (reduced)
+            (4095, 3359, 96),  // ~192-bit classical / NIST Level 3 (reduced)
+            (6939, 5412, 119), // ~256-bit classical / NIST Level 5 (reduced)
         ];
         let (n, k, w) = params[security_level];
-        
+
         Self {
             n,
             k,
@@ -147,12 +147,12 @@ impl BenchmarkConfig {
     // Real-world QC-MDPC parameters (adjusted for field size and QC constraints)
     pub fn real_world_qc(security_level: usize) -> Self {
         let params = [
-            (8190, 4095, 142),   // NIST Level 1 (n=2*4095, k=1*4095)
-            (16382, 8191, 159),  // NIST Level 3 (n=2*8191, k=1*8191)
-            (24573, 8191, 199),  // NIST Level 5 (n=3*8191, k=1*8191)
+            (8190, 4095, 142),  // NIST Level 1 (n=2*4095, k=1*4095)
+            (16382, 8191, 159), // NIST Level 3 (n=2*8191, k=1*8191)
+            (24573, 8191, 199), // NIST Level 5 (n=3*8191, k=1*8191)
         ];
         let (n, k, w) = params[security_level];
-        
+
         Self {
             n,
             k,
