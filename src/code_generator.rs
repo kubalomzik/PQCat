@@ -1,9 +1,9 @@
 use crate::codes::code_utils::convert_to_systematic;
 use crate::codes::goppa::{generate_goppa_parity_matrix, generate_valid_goppa_params};
+use crate::codes::qc::generate_hqc_qc_mdpc;
 use crate::types::GoppaParams;
 use ndarray::s;
 use ndarray::{Array2, Axis};
-use rand::seq::SliceRandom;
 use rand::{Rng, rng};
 use std::process;
 
@@ -138,60 +138,5 @@ pub fn generate_goppa_code(
 }
 
 pub fn generate_qc_code(n: usize, k: usize) -> Result<(Array2<u8>, Array2<u8>), String> {
-    let r = n - k; // Number of parity bits
-
-    if n % r != 0 || k % r != 0 {
-        return Err(format!(
-            "Invalid QC code parameters: both n ({}) and k ({}) should be multiples of r ({})",
-            n, k, r
-        ));
-    }
-
-    let p = r; // Block size for circulant matrices (using r for simplicity)
-    let num_blocks_cols = n / p;
-    let num_blocks_rows = r / p;
-
-    if num_blocks_rows != 1 {
-        return Err(format!(
-            "For simplicity, this implementation requires r=p, got r={}, p={}",
-            r, p
-        ));
-    }
-
-    // Create the parity-check matrix composed of circulant blocks
-    let mut h = Array2::<u8>::zeros((r, n));
-
-    for block_col in 0..num_blocks_cols {
-        // For each block column, generate a random first row
-        let mut first_row = vec![0; p];
-
-        // Make it sparse for better error correction (typically 2-3 1s per row)
-        let ones_per_row = 2.min(p / 2);
-        let mut indices: Vec<usize> = (0..p).collect();
-        indices.shuffle(&mut rng());
-
-        for &idx in indices.iter().take(ones_per_row) {
-            first_row[idx] = 1;
-        }
-
-        // Fill the block with cyclic shifts of the first row
-        for row in 0..p {
-            for col in 0..p {
-                let shifted_col = (col + row) % p;
-                h[[row, block_col * p + col]] = first_row[shifted_col];
-            }
-        }
-    }
-
-    // Ensure the last block is invertible by making it the identity matrix
-    for i in 0..p {
-        for j in 0..p {
-            h[[i, (num_blocks_cols - 1) * p + j]] = if i == j { 1 } else { 0 };
-        }
-    }
-
-    // Convert to systematic form and derive generator matrix
-    let (g, h_systematic) = convert_to_systematic(h);
-
-    Ok((g, h_systematic))
+    generate_hqc_qc_mdpc(n, k)
 }
