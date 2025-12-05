@@ -4,23 +4,72 @@ pub fn convert_to_systematic(h: Array2<u8>) -> (Array2<u8>, Array2<u8>) {
     let (m, n) = h.dim();
     let k = n - m;
 
-    /*
-    In a textbook implementation, we'd perform Gaussian elimination to get H in systematic form
-    For simplicity, we'll assume H is already in a form where we can extract P
-    */
+    let mut working_h = h;
+    let mut pivot_columns: Vec<usize> = Vec::with_capacity(m);
+    let mut row = 0;
 
-    // Extract P^T (m x k) from the left part of H
-    let p_t = h.slice(s![.., ..k]).to_owned();
+    for col in 0..n {
+        if row == m {
+            break;
+        }
 
-    // Create systematic form of H = [P^T | I_m]
-    let identity = Array2::<u8>::eye(m);
+        // Locate a pivot in the current column at or below the active row
+        if let Some(pivot_row) = (row..m).find(|&r| working_h[(r, col)] == 1) {
+            if pivot_row != row {
+                // Swap rows to bring the pivot into place
+                for c in 0..n {
+                    let tmp = working_h[(row, c)];
+                    working_h[(row, c)] = working_h[(pivot_row, c)];
+                    working_h[(pivot_row, c)] = tmp;
+                }
+            }
+
+            // Clear all other 1s in this column (GF(2) elimination)
+            for r in 0..m {
+                if r != row && working_h[(r, col)] == 1 {
+                    for c in 0..n {
+                        working_h[(r, c)] ^= working_h[(row, c)];
+                    }
+                }
+            }
+
+            pivot_columns.push(col);
+            row += 1;
+        }
+    }
+
+    assert!(
+        pivot_columns.len() == m,
+        "Parity-check matrix is not full rank; cannot convert to systematic form"
+    );
+
+    let mut is_pivot = vec![false; n];
+    for &col in &pivot_columns {
+        is_pivot[col] = true;
+    }
+
+    // Reorder columns so non-pivot columns precede pivot columns, yielding [P^T | I]
+    let mut column_order: Vec<usize> = Vec::with_capacity(n);
+    for col in 0..n {
+        if !is_pivot[col] {
+            column_order.push(col);
+        }
+    }
+    for &col in &pivot_columns {
+        column_order.push(col);
+    }
+
     let mut systematic_h = Array2::<u8>::zeros((m, n));
-    systematic_h.slice_mut(s![.., ..k]).assign(&p_t);
-    systematic_h.slice_mut(s![.., k..]).assign(&identity);
+    for (new_idx, &old_idx) in column_order.iter().enumerate() {
+        let source_col = working_h.column(old_idx);
+        systematic_h.column_mut(new_idx).assign(&source_col);
+    }
 
-    // Create generator matrix G = [I_k | P]
-    let p = p_t.t().to_owned();
+    // After permutation systematic_h = [P^T | I_m]
+    let p_t = systematic_h.slice(s![.., ..k]).to_owned();
+
     let identity_k = Array2::<u8>::eye(k);
+    let p = p_t.t().to_owned();
     let g = ndarray::concatenate(Axis(1), &[identity_k.view(), p.view()]).unwrap();
 
     (g, systematic_h)
