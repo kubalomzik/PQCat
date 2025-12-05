@@ -29,9 +29,13 @@ pub fn run_stern_algorithm(
     left_indices.shuffle(&mut rng());
     right_indices.shuffle(&mut rng());
 
-    // Create hash maps for subsets
-    let mut left_map: HashMap<Vec<u8>, Vec<usize>> = HashMap::new();
-    let mut right_map: HashMap<Vec<u8>, Vec<usize>> = HashMap::new();
+    /*
+    Create hash maps for subsets
+    Every subset that yields a given syndrome is stored
+    so that collisions are preserved instead of overwriting them
+    */
+    let mut left_map: HashMap<Vec<u8>, Vec<Vec<usize>>> = HashMap::new();
+    let mut right_map: HashMap<Vec<u8>, Vec<Vec<usize>>> = HashMap::new();
 
     // Populate the left map
     let left_weight = weight / 2;
@@ -41,7 +45,10 @@ pub fn run_stern_algorithm(
             candidate_error[i] = 1;
         }
         let syndrome = calculate_syndrome(&candidate_error, h);
-        left_map.insert(syndrome.clone(), subset);
+        left_map
+            .entry(syndrome)
+            .or_insert_with(Vec::new)
+            .push(subset.clone());
     }
 
     // Populate the right map
@@ -52,32 +59,39 @@ pub fn run_stern_algorithm(
             candidate_error[i] = 1;
         }
         let syndrome = calculate_syndrome(&candidate_error, h);
-        right_map.insert(syndrome.clone(), subset);
+        right_map
+            .entry(syndrome)
+            .or_insert_with(Vec::new)
+            .push(subset.clone());
     }
 
     // Find matching syndromes in both maps
-    for (left_syndrome, left_subset) in &left_map {
+    for (left_syndrome, left_subsets) in &left_map {
         let mut complement_syndrome = target_syndrome.clone();
         for (i, &val) in left_syndrome.iter().enumerate() {
             complement_syndrome[i] ^= val;
         }
-        if let Some(right_subset) = right_map.get(&complement_syndrome) {
-            // Combine the subsets to form the error vector
-            let mut candidate_error = vec![0; n];
-            for &i in left_subset {
-                candidate_error[i] = 1;
-            }
-            for &i in right_subset {
-                candidate_error[i] = 1;
-            }
-            update_peak_memory(start_memory, &mut peak_memory);
+        if let Some(right_subsets) = right_map.get(&complement_syndrome) {
+            for left_subset in left_subsets {
+                for right_subset in right_subsets {
+                    // Combine the subsets to form the error vector
+                    let mut candidate_error = vec![0; n];
+                    for &i in left_subset {
+                        candidate_error[i] = 1;
+                    }
+                    for &i in right_subset {
+                        candidate_error[i] = 1;
+                    }
+                    update_peak_memory(start_memory, &mut peak_memory);
 
-            let metrics = AlgorithmMetrics {
-                time: start_time.elapsed().as_micros() as usize,
-                peak_memory,
-            };
+                    let metrics = AlgorithmMetrics {
+                        time: start_time.elapsed().as_micros() as usize,
+                        peak_memory,
+                    };
 
-            return (Some(candidate_error), metrics);
+                    return (Some(candidate_error), metrics);
+                }
+            }
         }
     }
 
