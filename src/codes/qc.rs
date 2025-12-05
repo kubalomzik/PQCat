@@ -1,10 +1,12 @@
 use ndarray::Array2;
-use rand::{seq::SliceRandom, rng};
+use rand::{rng, seq::SliceRandom};
 
 const MAX_QC_ATTEMPTS: usize = 64;
 
 pub fn generate_hqc_qc_mdpc(n: usize, k: usize) -> Result<(Array2<u8>, Array2<u8>), String> {
-    let r = n.checked_sub(k).ok_or_else(|| "Invalid parameters: k must be <= n".to_string())?;
+    let r = n
+        .checked_sub(k)
+        .ok_or_else(|| "Invalid parameters: k must be <= n".to_string())?;
 
     if n != 2 * r || k != r {
         return Err(format!(
@@ -42,9 +44,9 @@ pub fn generate_hqc_qc_mdpc(n: usize, k: usize) -> Result<(Array2<u8>, Array2<u8
 
 fn row_weight_for_length(n: usize) -> Result<usize, String> {
     match n {
-        35338 => Ok(90),    // HQC-128
-        71702 => Ok(114),   // HQC-192 (spec value)
-        115274 => Ok(149),  // HQC-256
+        35338 => Ok(90),   // HQC-128
+        71702 => Ok(114),  // HQC-192 (spec value)
+        115274 => Ok(149), // HQC-256
         _ => Err(format!(
             "Unsupported HQC code length {}. Please add the corresponding row weight.",
             n
@@ -130,11 +132,7 @@ fn polynomial_gcd(mut a: Vec<u8>, mut b: Vec<u8>) -> Vec<u8> {
         b = r;
     }
 
-    if a.is_empty() {
-        vec![0]
-    } else {
-        a
-    }
+    if a.is_empty() { vec![0] } else { a }
 }
 
 fn polynomial_mod(dividend: Vec<u8>, divisor: &[u8]) -> Vec<u8> {

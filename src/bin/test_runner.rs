@@ -4,7 +4,7 @@ use pqcat::benchmarks::benchmark_runner::{
     run_all_qc_tests, run_all_tests_for_algorithm, run_benchmark, run_real_world_test,
 };
 #[allow(unused_imports)]
-use pqcat::types::BenchmarkConfig;
+use pqcat::types::{Algorithm, BenchmarkConfig};
 
 fn main() {
     // Option 1: Run a single test case (e.g scaling size of the Hamming code)
@@ -26,7 +26,7 @@ fn main() {
     // Option 5: Run real-world parameters (more in-line with practical use cases) for specific algorithms
     // run_real_world_test("prange", 100); - or combine with e.g. option 3 to run for multiple chose algorithms
 
-    let algorithms = ["bjmm"];
+    let algorithms = [Algorithm::Bjmm];
     for &alg in &algorithms {
         run_real_world_test(alg, 1);
     }

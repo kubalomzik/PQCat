@@ -1,4 +1,4 @@
-use crate::types::BenchmarkConfig;
+use crate::types::{Algorithm, BenchmarkConfig, CodeType};
 
 #[allow(dead_code)]
 impl BenchmarkConfig {
@@ -13,7 +13,7 @@ impl BenchmarkConfig {
             n,
             k,
             w: 1,
-            code_type: "hamming".to_string(),
+            code_type: CodeType::Hamming,
             ..Self::default()
         }
     }
@@ -26,7 +26,7 @@ impl BenchmarkConfig {
             n: 31,
             k: 26,
             w: weights[weight_index],
-            code_type: "hamming".to_string(),
+            code_type: CodeType::Hamming,
             ..Self::default()
         }
     }
@@ -47,7 +47,7 @@ impl BenchmarkConfig {
             n,
             k,
             w,
-            code_type: "goppa".to_string(),
+            code_type: CodeType::Goppa,
             ..Self::default()
         }
     }
@@ -66,7 +66,7 @@ impl BenchmarkConfig {
             n,
             k,
             w,
-            code_type: "goppa".to_string(),
+            code_type: CodeType::Goppa,
             ..Self::default()
         }
     }
@@ -87,7 +87,7 @@ impl BenchmarkConfig {
             n,
             k,
             w,
-            code_type: "qc".to_string(),
+            code_type: CodeType::Qc,
             ..Self::default()
         }
     }
@@ -101,7 +101,7 @@ impl BenchmarkConfig {
             n: 60,
             k: 40,
             w,
-            code_type: "qc".to_string(),
+            code_type: CodeType::Qc,
             ..Self::default()
         }
     }
@@ -109,14 +109,14 @@ impl BenchmarkConfig {
     // ==================== MMT CONFIGURATION ====================
 
     // MMT algorithm configuration
-    pub fn mmt_config(n: usize, k: usize, w: usize, code_type: &str) -> Self {
+    pub fn mmt_config(n: usize, k: usize, w: usize, code_type: CodeType) -> Self {
         Self {
             runs: 100,
-            algorithm_name: "mmt".to_string(),
+            algorithm: Algorithm::Mmt,
             n,
             k,
             w,
-            code_type: code_type.to_string(),
+            code_type,
             p: Some(2),
             l1: Some(256),
             l2: Some(256),
@@ -139,7 +139,7 @@ impl BenchmarkConfig {
             n,
             k,
             w,
-            code_type: "goppa".to_string(),
+            code_type: CodeType::Goppa,
             ..Self::default()
         }
     }
@@ -157,7 +157,7 @@ impl BenchmarkConfig {
             n,
             k,
             w,
-            code_type: "qc".to_string(),
+            code_type: CodeType::Qc,
             ..Self::default()
         }
     }
@@ -165,8 +165,8 @@ impl BenchmarkConfig {
     // ==================== BUILDER METHODS ====================
 
     // Set algorithm
-    pub fn with_algorithm(mut self, alg: &str) -> Self {
-        self.algorithm_name = alg.to_string();
+    pub fn with_algorithm(mut self, alg: Algorithm) -> Self {
+        self.algorithm = alg;
         self
     }
 

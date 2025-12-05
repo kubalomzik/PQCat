@@ -1,4 +1,4 @@
-use crate::types::{BenchmarkConfig, BenchmarkResult, BenchmarkStats};
+use crate::types::{Algorithm, BenchmarkConfig, BenchmarkResult, BenchmarkStats};
 use csv::Writer;
 use regex::Regex;
 use std::fs::{self, File};
@@ -29,8 +29,7 @@ pub fn extract_memory(output: &str) -> Option<u64> {
 
 pub fn ensure_results_directory() {
     if !Path::new("./results").exists() {
-        fs::create_dir("./results")
-            .expect("Failed to create results directory");
+        fs::create_dir("./results").expect("Failed to create results directory");
         fs::create_dir("./results/txt").expect("Failed to create txt directory");
         fs::create_dir("./results/csv").expect("Failed to create csv directory");
     }
@@ -39,7 +38,7 @@ pub fn ensure_results_directory() {
 pub fn create_output_files(config: &BenchmarkConfig) -> (Writer<File>, String) {
     let csv_path = format!(
         "./results/csv/{}_{}_n{}_k{}_w{}.csv",
-        &config.algorithm_name, &config.code_type, config.n, config.k, config.w
+        config.algorithm, config.code_type, config.n, config.k, config.w
     );
 
     let file = File::create(&csv_path).expect("Failed to create CSV file");
@@ -51,7 +50,7 @@ pub fn create_output_files(config: &BenchmarkConfig) -> (Writer<File>, String) {
 
     let txt_filename = format!(
         "./results/txt/{}_{}_n{}_k{}_w{}.txt",
-        &config.algorithm_name, &config.code_type, config.n, config.k, config.w
+        config.algorithm, config.code_type, config.n, config.k, config.w
     );
 
     (writer, txt_filename)
@@ -121,7 +120,7 @@ pub fn execute_single_run(config: &BenchmarkConfig, run: usize) -> Option<Benchm
 pub fn build_command(config: &BenchmarkConfig) -> Command {
     let mut cmd = Command::new("./target/release/pqcat");
 
-    cmd.arg(config.algorithm_name.as_str());
+    cmd.arg(config.algorithm.as_cli_subcommand());
 
     // Add common parameters
     cmd.arg("--n")
@@ -132,12 +131,12 @@ pub fn build_command(config: &BenchmarkConfig) -> Command {
         .arg(config.w.to_string());
 
     // Add code type parameter except for Patterson (which is always Goppa)
-    if config.algorithm_name != "patterson" {
-        cmd.arg("--code-type").arg(&config.code_type);
+    if config.algorithm != Algorithm::Patterson {
+        cmd.arg("--code-type").arg(config.code_type.as_str());
     }
 
     // Add MMT-specific parameters if needed
-    if config.algorithm_name == "mmt" {
+    if config.algorithm == Algorithm::Mmt {
         if let Some(p) = config.p {
             cmd.arg("--p").arg(p.to_string());
         }
@@ -238,7 +237,7 @@ pub fn write_results_to_file(
 
     let mut txt_file = File::create(txt_filename).expect("Failed to create TXT file");
 
-    writeln!(txt_file, "Algorithm: {}", config.algorithm_name).unwrap();
+    writeln!(txt_file, "Algorithm: {}", config.algorithm).unwrap();
     writeln!(txt_file, "Code Type: {}", config.code_type).unwrap();
     writeln!(
         txt_file,
@@ -274,7 +273,7 @@ pub fn write_results_to_file(
 
 pub fn print_summary(config: &BenchmarkConfig, stats: &BenchmarkStats) {
     println!("\nBENCHMARK SUMMARY");
-    println!("Algorithm: {}", config.algorithm_name);
+    println!("Algorithm: {}", config.algorithm);
     println!(
         "Code: {} (n={}, k={}, w={})",
         config.code_type, config.n, config.k, config.w

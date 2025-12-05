@@ -44,3 +44,24 @@ In its current state it's able to handle random linear codes, Hamming, Goppa and
 
    - In order to use the bulk test/benchmark runner:
    ```./target/release/test_runner```
+
+## CLI Allowed Values
+
+PQCat exposes each decoding algorithm as a `pqcat <algorithm>` subcommand. Valid names are:
+
+- `prange`
+- `stern`
+- `lee-brickell`
+- `ball-collision`
+- `bjmm`
+- `mmt`
+- `patterson`
+
+Whenever a command accepts `--code-type`, the flag is restricted to:
+
+- `random`
+- `hamming`
+- `goppa`
+- `qc`
+
+These values are enforced by the CLI parser, so typos will be rejected before the run starts.

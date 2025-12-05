@@ -1,13 +1,13 @@
 use crate::codes::code_utils::convert_to_systematic;
 use crate::codes::goppa::{generate_goppa_parity_matrix, generate_valid_goppa_params};
 use crate::codes::qc::generate_hqc_qc_mdpc;
-use crate::types::GoppaParams;
+use crate::types::{CodeType, GoppaParams};
 use ndarray::s;
 use ndarray::{Array2, Axis};
 use rand::{Rng, rng};
 use std::process;
 
-fn handle_code_result<T>(result: Result<T, String>, code_type: &str) -> T {
+fn handle_code_result<T>(result: Result<T, String>, code_type: CodeType) -> T {
     match result {
         Ok(value) => value,
         Err(e) => {
@@ -21,28 +21,25 @@ pub fn generate_code(
     n: usize,
     k: usize,
     w: usize,
-    code_type: String,
+    code_type: CodeType,
 ) -> (Array2<u8>, Array2<u8>, Option<GoppaParams>) {
-    match code_type.as_str() {
-        "random" => {
-            let (g, h) = handle_code_result(generate_random_code(n, k), "random");
+    match code_type {
+        CodeType::Random => {
+            let (g, h) = handle_code_result(generate_random_code(n, k), CodeType::Random);
             (g, h, None)
         }
-        "hamming" => {
-            let (g, h) = handle_code_result(generate_hamming_code(n, k), "hamming");
+        CodeType::Hamming => {
+            let (g, h) = handle_code_result(generate_hamming_code(n, k), CodeType::Hamming);
             (g, h, None)
         }
-        "goppa" => {
-            let (g, h, goppa_params) = handle_code_result(generate_goppa_code(n, k, w), "goppa");
+        CodeType::Goppa => {
+            let (g, h, goppa_params) =
+                handle_code_result(generate_goppa_code(n, k, w), CodeType::Goppa);
             (g, h, Some(goppa_params))
         }
-        "qc" => {
-            let (g, h) = handle_code_result(generate_qc_code(n, k), "qc");
+        CodeType::Qc => {
+            let (g, h) = handle_code_result(generate_qc_code(n, k), CodeType::Qc);
             (g, h, None)
-        }
-        _ => {
-            eprintln!("Error: Unsupported code type '{}'", code_type);
-            process::exit(1);
         }
     }
 }

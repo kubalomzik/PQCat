@@ -2,7 +2,7 @@ use crate::benchmarks::benchmark_utils::{
     calculate_statistics, create_output_files, ensure_results_directory, execute_benchmark_runs,
     print_summary, write_results_to_file,
 };
-use crate::types::BenchmarkConfig;
+use crate::types::{Algorithm, BenchmarkConfig};
 
 #[allow(dead_code)]
 pub fn run_benchmark(config: BenchmarkConfig) {
@@ -22,11 +22,11 @@ pub fn run_benchmark(config: BenchmarkConfig) {
 // ==================== BATCH TEST FUNCTIONS ====================
 
 #[allow(dead_code)]
-pub fn run_all_tests_for_algorithm(algorithm: &str, runs: usize) {
+pub fn run_all_tests_for_algorithm(algorithm: Algorithm, runs: usize) {
     // Skip incompatible algorithm-code combinations
     match algorithm {
-        "patterson" => run_all_goppa_tests(algorithm, runs),
-        "mmt" => run_all_mmt_tests(runs),
+        Algorithm::Patterson => run_all_goppa_tests(algorithm, runs),
+        Algorithm::Mmt => run_all_mmt_tests(runs),
         _ => {
             // For all other ISD algorithms
             run_all_hamming_tests(algorithm, runs);
@@ -36,7 +36,7 @@ pub fn run_all_tests_for_algorithm(algorithm: &str, runs: usize) {
     }
 }
 
-pub fn run_all_hamming_tests(algorithm: &str, runs: usize) {
+pub fn run_all_hamming_tests(algorithm: Algorithm, runs: usize) {
     // Test 1: Scaling code size
     for i in 0..4 {
         let config = BenchmarkConfig::hamming_scaling_size(i)
@@ -54,7 +54,7 @@ pub fn run_all_hamming_tests(algorithm: &str, runs: usize) {
     }
 }
 
-pub fn run_all_goppa_tests(algorithm: &str, runs: usize) {
+pub fn run_all_goppa_tests(algorithm: Algorithm, runs: usize) {
     // Test 1: Scaling code size
     for i in 0..4 {
         let config = BenchmarkConfig::goppa_scaling_size(i)
@@ -72,7 +72,7 @@ pub fn run_all_goppa_tests(algorithm: &str, runs: usize) {
     }
 }
 
-pub fn run_all_qc_tests(algorithm: &str, runs: usize) {
+pub fn run_all_qc_tests(algorithm: Algorithm, runs: usize) {
     // Test 1: Scaling code size
     for i in 0..4 {
         let config = BenchmarkConfig::qc_scaling_size(i)
@@ -101,7 +101,7 @@ pub fn run_all_hamming_tests_mmt(runs: usize) {
     // Test 1: Scaling code size
     for i in 0..4 {
         let config = BenchmarkConfig::hamming_scaling_size(i)
-            .with_algorithm("mmt")
+            .with_algorithm(Algorithm::Mmt)
             .with_runs(runs)
             .with_mmt_params(2, 256, 256); // Default MMT parameters
         run_benchmark(config);
@@ -110,7 +110,7 @@ pub fn run_all_hamming_tests_mmt(runs: usize) {
     // Test 2: Scaling error weight
     for i in 0..4 {
         let config = BenchmarkConfig::hamming_scaling_weight(i)
-            .with_algorithm("mmt")
+            .with_algorithm(Algorithm::Mmt)
             .with_runs(runs)
             .with_mmt_params(2, 256, 256); // Default MMT parameters
         run_benchmark(config);
@@ -122,7 +122,7 @@ pub fn run_all_goppa_tests_mmt(runs: usize) {
     // Test 1: Scaling code size
     for i in 0..4 {
         let config = BenchmarkConfig::goppa_scaling_size(i)
-            .with_algorithm("mmt")
+            .with_algorithm(Algorithm::Mmt)
             .with_runs(runs)
             .with_mmt_params(2, 256, 256); // Default MMT parameters
         run_benchmark(config);
@@ -131,7 +131,7 @@ pub fn run_all_goppa_tests_mmt(runs: usize) {
     // Test 2: Scaling error correction capability
     for i in 0..4 {
         let config = BenchmarkConfig::goppa_scaling_weight(i)
-            .with_algorithm("mmt")
+            .with_algorithm(Algorithm::Mmt)
             .with_runs(runs)
             .with_mmt_params(2, 256, 256); // Default MMT parameters
         run_benchmark(config);
@@ -143,7 +143,7 @@ pub fn run_all_qc_tests_mmt(runs: usize) {
     // Test 1: Scaling code size
     for i in 0..4 {
         let config = BenchmarkConfig::qc_scaling_size(i)
-            .with_algorithm("mmt")
+            .with_algorithm(Algorithm::Mmt)
             .with_runs(runs)
             .with_mmt_params(2, 256, 256); // Default MMT parameters
         run_benchmark(config);
@@ -152,7 +152,7 @@ pub fn run_all_qc_tests_mmt(runs: usize) {
     // Test 2: Scaling error weight
     for i in 0..4 {
         let config = BenchmarkConfig::qc_scaling_weight(i)
-            .with_algorithm("mmt")
+            .with_algorithm(Algorithm::Mmt)
             .with_runs(runs)
             .with_mmt_params(2, 256, 256); // Default MMT parameters
         run_benchmark(config);
@@ -162,12 +162,12 @@ pub fn run_all_qc_tests_mmt(runs: usize) {
 #[allow(dead_code)]
 pub fn run_all_benchmarks(runs: usize) {
     let algorithms = [
-        "prange",
-        "stern",
-        "lee_brickell",
-        "ball_collision",
-        "bjmm",
-        "patterson",
+        Algorithm::Prange,
+        Algorithm::Stern,
+        Algorithm::LeeBrickell,
+        Algorithm::BallCollision,
+        Algorithm::Bjmm,
+        Algorithm::Patterson,
     ];
 
     for &algorithm in &algorithms {
@@ -179,7 +179,7 @@ pub fn run_all_benchmarks(runs: usize) {
 }
 
 #[allow(dead_code)]
-pub fn run_real_world_test(algorithm: &str, runs: usize) {
+pub fn run_real_world_test(algorithm: Algorithm, runs: usize) {
     for i in 0..2 {
         // Just test first two levels as higher ones might be too slow
         let config = BenchmarkConfig::real_world_goppa(i)

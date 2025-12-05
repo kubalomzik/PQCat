@@ -7,7 +7,7 @@ mod codes;
 mod types;
 
 use algorithm_runner::run_algorithm;
-use types::{CodeParams, PartitionParams};
+use types::{Algorithm, CodeParams, CodeType, PartitionParams};
 
 #[derive(Parser)]
 #[command(name = "pqcat")]
@@ -26,8 +26,8 @@ enum Commands {
         k: usize, // Message length (number of bits)
         #[arg(short, long, default_value_t = 1)]
         w: usize, // Weight of the error vector (number of errors)
-        #[arg(short, long, default_value = "hamming")]
-        code_type: String, // Type of code: "random", "hamming", or "goppa"
+        #[arg(short, long, value_enum, default_value_t = CodeType::Hamming)]
+        code_type: CodeType, // Type of code: "random", "hamming", "goppa", or "qc"
     },
     Stern {
         #[arg(short, long, default_value_t = 15)]
@@ -36,8 +36,8 @@ enum Commands {
         k: usize,
         #[arg(short, long, default_value_t = 1)]
         w: usize,
-        #[arg(short, long, default_value = "hamming")]
-        code_type: String,
+        #[arg(short, long, value_enum, default_value_t = CodeType::Hamming)]
+        code_type: CodeType,
     },
     LeeBrickell {
         #[arg(short, long, default_value_t = 23)]
@@ -46,8 +46,8 @@ enum Commands {
         k: usize,
         #[arg(short, long, default_value_t = 3)]
         w: usize,
-        #[arg(short, long, default_value = "random")]
-        code_type: String,
+        #[arg(short, long, value_enum, default_value_t = CodeType::Random)]
+        code_type: CodeType,
     },
     BallCollision {
         #[arg(short, long, default_value_t = 23)]
@@ -56,8 +56,8 @@ enum Commands {
         k: usize,
         #[arg(short, long, default_value_t = 3)]
         w: usize,
-        #[arg(short, long, default_value = "random")]
-        code_type: String,
+        #[arg(short, long, value_enum, default_value_t = CodeType::Random)]
+        code_type: CodeType,
     },
     Mmt {
         #[arg(short, long, default_value_t = 31)]
@@ -66,8 +66,8 @@ enum Commands {
         k: usize,
         #[arg(short, long, default_value_t = 4)]
         w: usize,
-        #[arg(short, long, default_value = "random")]
-        code_type: String,
+        #[arg(short, long, value_enum, default_value_t = CodeType::Random)]
+        code_type: CodeType,
         #[arg(short, long, default_value_t = 2)]
         p: usize,
         #[arg(long, default_value_t = 256)]
@@ -82,8 +82,8 @@ enum Commands {
         k: usize,
         #[arg(short, long, default_value_t = 3)]
         w: usize,
-        #[arg(short, long, default_value = "random")]
-        code_type: String,
+        #[arg(short, long, value_enum, default_value_t = CodeType::Random)]
+        code_type: CodeType,
     },
     Patterson {
         #[arg(short, long, default_value_t = 31)]
@@ -102,19 +102,19 @@ fn main() {
     match cli.command {
         Commands::Prange { n, k, w, code_type } => {
             let code_params = CodeParams { n, k, w, code_type };
-            run_algorithm("prange", code_params, None);
+            run_algorithm(Algorithm::Prange, code_params, None);
         }
         Commands::Stern { n, k, w, code_type } => {
             let code_params = CodeParams { n, k, w, code_type };
-            run_algorithm("stern", code_params, None);
+            run_algorithm(Algorithm::Stern, code_params, None);
         }
         Commands::LeeBrickell { n, k, w, code_type } => {
             let code_params = CodeParams { n, k, w, code_type };
-            run_algorithm("lee_brickell", code_params, None);
+            run_algorithm(Algorithm::LeeBrickell, code_params, None);
         }
         Commands::BallCollision { n, k, w, code_type } => {
             let code_params = CodeParams { n, k, w, code_type };
-            run_algorithm("ball_collision", code_params, None);
+            run_algorithm(Algorithm::BallCollision, code_params, None);
         }
         Commands::Mmt {
             n,
@@ -131,16 +131,20 @@ fn main() {
                 l1: Some(l1),
                 l2: Some(l2),
             };
-            run_algorithm("mmt", code_params, Some(partition_params));
+            run_algorithm(Algorithm::Mmt, code_params, Some(partition_params));
         }
         Commands::Bjmm { n, k, w, code_type } => {
             let code_params = CodeParams { n, k, w, code_type };
-            run_algorithm("bjmm", code_params, None);
+            run_algorithm(Algorithm::Bjmm, code_params, None);
         }
         Commands::Patterson { n, k, w } => {
-            let code_type = "goppa".to_string();
-            let code_params = CodeParams { n, k, w, code_type };
-            run_algorithm("patterson", code_params, None);
+            let code_params = CodeParams {
+                n,
+                k,
+                w,
+                code_type: CodeType::Goppa,
+            };
+            run_algorithm(Algorithm::Patterson, code_params, None);
         }
     }
 }

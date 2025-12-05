@@ -4,10 +4,10 @@ use crate::algorithms::algorithm_utils::{
 use crate::algorithms::metrics::{AlgorithmMetrics, print_metrics};
 use crate::algorithms::{ball_collision, bjmm, lee_brickell, mmt, patterson, prange, stern};
 use crate::code_generator::generate_code;
-use crate::types::{CodeParams, PartitionParams};
+use crate::types::{Algorithm, CodeParams, PartitionParams};
 
 pub fn run_algorithm(
-    algorithm_name: &str,
+    algorithm: Algorithm,
     code_params: CodeParams,
     partition_params: Option<PartitionParams>,
 ) {
@@ -15,13 +15,13 @@ pub fn run_algorithm(
         code_params.n,
         code_params.k,
         code_params.w,
-        code_params.code_type.clone(),
+        code_params.code_type,
     );
 
     let original_error = generate_random_error_vector(code_params.n, code_params.w); // Generate a random error vector of weight w
     println!("Original Error Vector: {:?}", original_error);
 
-    let received_vector = if algorithm_name != "mmt" {
+    let received_vector = if algorithm != Algorithm::Mmt {
         let codeword = g.row(0).to_vec();
         let received_vector = apply_errors(&codeword, &original_error); // Apply errors to a valid codeword
         println!("Received Vector:       {:?}", received_vector);
@@ -30,8 +30,8 @@ pub fn run_algorithm(
         Vec::new()
     };
 
-    let (decoded_err, algorithm_metrics) = match algorithm_name {
-        "mmt" => {
+    let (decoded_err, algorithm_metrics) = match algorithm {
+        Algorithm::Mmt => {
             /*
             This algorithm, unlike other available here, does not work directly with the corrupted codeword.
             Instead, it operates in syndrome space so there's no need to generate error vector or apply errors.
@@ -54,39 +54,27 @@ pub fn run_algorithm(
                 )
             }
         }
-        _ => match algorithm_name {
-            "prange" => prange::run_prange_algorithm(&received_vector, &h, code_params.w),
-            "stern" => stern::run_stern_algorithm(&received_vector, &h, code_params.w),
-            "lee_brickell" => lee_brickell::run_lee_brickell_algorithm(
-                &received_vector,
-                &h,
-                code_params.n,
-                code_params.w,
-            ),
-            "ball_collision" => ball_collision::run_ball_collision_algorithm(
-                &received_vector,
-                &h,
-                code_params.n,
-                code_params.w,
-            ),
-            "bjmm" => bjmm::run_bjmm_algorithm(&received_vector, &h, code_params.n, code_params.w),
-            "patterson" => {
-                let goppa_params = goppa_params.unwrap();
-                patterson::run_patterson_algorithm(
-                    &received_vector,
-                    &h,
-                    &goppa_params,
-                    code_params.w,
-                )
-            }
-            _ => (
-                None,
-                AlgorithmMetrics {
-                    time: 0,
-                    peak_memory: 0,
-                },
-            ),
-        },
+        Algorithm::Prange => prange::run_prange_algorithm(&received_vector, &h, code_params.w),
+        Algorithm::Stern => stern::run_stern_algorithm(&received_vector, &h, code_params.w),
+        Algorithm::LeeBrickell => lee_brickell::run_lee_brickell_algorithm(
+            &received_vector,
+            &h,
+            code_params.n,
+            code_params.w,
+        ),
+        Algorithm::BallCollision => ball_collision::run_ball_collision_algorithm(
+            &received_vector,
+            &h,
+            code_params.n,
+            code_params.w,
+        ),
+        Algorithm::Bjmm => {
+            bjmm::run_bjmm_algorithm(&received_vector, &h, code_params.n, code_params.w)
+        }
+        Algorithm::Patterson => {
+            let goppa_params = goppa_params.unwrap();
+            patterson::run_patterson_algorithm(&received_vector, &h, &goppa_params, code_params.w)
+        }
     };
 
     // Print algorithm metrics regardless of success/failure
