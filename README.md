@@ -65,3 +65,10 @@ Whenever a command accepts `--code-type`, the flag is restricted to:
 - `qc`
 
 These values are enforced by the CLI parser, so typos will be rejected before the run starts.
+
+To use NIST-official parameter sets quickly, pass the optional `--preset` flag. Supported presets are:
+
+- Classic McEliece: `classic-mceliece-348864`, `classic-mceliece-460896`, `classic-mceliece-6688128`
+- HQC (QC-MDPC): `hqc-128`, `hqc-192`, `hqc-256`
+
+Supplying a preset automatically selects the matching code type and fills in the prescribed `(n, k, w)` values while still allowing manual toy parameters when no preset is supplied. Note that these presets require significant computation time even for a single run.

@@ -79,12 +79,102 @@ impl fmt::Display for CodeType {
     }
 }
 
+#[derive(Copy, Clone, Debug, PartialEq, Eq, ValueEnum)]
+#[value(rename_all = "kebab-case")]
+pub enum CodePreset {
+    ClassicMceliece348864,
+    ClassicMceliece460896,
+    ClassicMceliece6688128,
+    Hqc128,
+    Hqc192,
+    Hqc256,
+}
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct CodePresetParams {
+    pub code_type: CodeType,
+    pub n: usize,
+    pub k: usize,
+    pub w: usize,
+}
+
+impl CodePreset {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            CodePreset::ClassicMceliece348864 => "classic-mceliece-348864",
+            CodePreset::ClassicMceliece460896 => "classic-mceliece-460896",
+            CodePreset::ClassicMceliece6688128 => "classic-mceliece-6688128",
+            CodePreset::Hqc128 => "hqc-128",
+            CodePreset::Hqc192 => "hqc-192",
+            CodePreset::Hqc256 => "hqc-256",
+        }
+    }
+
+    pub fn params(&self) -> CodePresetParams {
+        match self {
+            CodePreset::ClassicMceliece348864 => CodePresetParams {
+                code_type: CodeType::Goppa,
+                n: 3488,
+                k: 2720,
+                w: 64,
+            },
+            CodePreset::ClassicMceliece460896 => CodePresetParams {
+                code_type: CodeType::Goppa,
+                n: 4608,
+                k: 3360,
+                w: 96,
+            },
+            CodePreset::ClassicMceliece6688128 => CodePresetParams {
+                code_type: CodeType::Goppa,
+                n: 6688,
+                k: 5024,
+                w: 128,
+            },
+            CodePreset::Hqc128 => CodePresetParams {
+                code_type: CodeType::Qc,
+                n: 35338,
+                k: 17669,
+                w: 128,
+            },
+            CodePreset::Hqc192 => CodePresetParams {
+                code_type: CodeType::Qc,
+                n: 71702,
+                k: 35851,
+                w: 192,
+            },
+            CodePreset::Hqc256 => CodePresetParams {
+                code_type: CodeType::Qc,
+                n: 115274,
+                k: 57637,
+                w: 256,
+            },
+        }
+    }
+}
+
+impl fmt::Display for CodePreset {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(self.as_str())
+    }
+}
+
 #[derive(Clone)]
 pub struct CodeParams {
     pub n: usize,
     pub k: usize,
     pub w: usize,
     pub code_type: CodeType,
+}
+
+impl CodeParams {
+    pub fn apply_preset(&mut self, preset: CodePreset) -> CodePresetParams {
+        let params = preset.params();
+        self.n = params.n;
+        self.k = params.k;
+        self.w = params.w;
+        self.code_type = params.code_type;
+        params
+    }
 }
 
 #[derive(Clone)]
@@ -131,6 +221,22 @@ impl Default for BenchmarkConfig {
             l1: None,
             l2: None,
         }
+    }
+}
+
+impl BenchmarkConfig {
+    pub fn apply_preset(&mut self, preset: CodePreset) -> CodePresetParams {
+        let params = preset.params();
+        self.n = params.n;
+        self.k = params.k;
+        self.w = params.w;
+        self.code_type = params.code_type;
+        params
+    }
+
+    pub fn with_preset(mut self, preset: CodePreset) -> Self {
+        self.apply_preset(preset);
+        self
     }
 }
 

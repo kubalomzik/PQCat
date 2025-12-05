@@ -2,6 +2,7 @@ use ndarray::Array2;
 use rand::{rng, seq::SliceRandom};
 
 const MAX_QC_ATTEMPTS: usize = 64;
+const HQC_ROW_WEIGHTS: &[(usize, usize)] = &[(35338, 90), (71702, 114), (115274, 149)];
 
 pub fn generate_hqc_qc_mdpc(n: usize, k: usize) -> Result<(Array2<u8>, Array2<u8>), String> {
     let r = n
@@ -15,7 +16,14 @@ pub fn generate_hqc_qc_mdpc(n: usize, k: usize) -> Result<(Array2<u8>, Array2<u8
         ));
     }
 
-    let row_weight = row_weight_for_length(n)?;
+    let row_weight = row_weight_for_length(n).unwrap_or_else(|| {
+        let fallback = fallback_row_weight(r);
+        eprintln!(
+            "Warning: no official HQC row weight for n={}; using fallback weight {}.",
+            n, fallback
+        );
+        fallback
+    });
 
     let mut rng = rng();
 
@@ -42,16 +50,16 @@ pub fn generate_hqc_qc_mdpc(n: usize, k: usize) -> Result<(Array2<u8>, Array2<u8
     Err("Failed to generate invertible HQC QC-MDPC matrix after multiple attempts".to_string())
 }
 
-fn row_weight_for_length(n: usize) -> Result<usize, String> {
-    match n {
-        35338 => Ok(90),   // HQC-128
-        71702 => Ok(114),  // HQC-192 (spec value)
-        115274 => Ok(149), // HQC-256
-        _ => Err(format!(
-            "Unsupported HQC code length {}. Please add the corresponding row weight.",
-            n
-        )),
-    }
+fn row_weight_for_length(n: usize) -> Option<usize> {
+    HQC_ROW_WEIGHTS
+        .iter()
+        .find(|(length, _)| *length == n)
+        .map(|(_, weight)| *weight)
+}
+
+fn fallback_row_weight(r: usize) -> usize {
+    let candidate = std::cmp::max(1, r / 4);
+    std::cmp::min(candidate, r)
 }
 
 fn build_circulant(first_row: &[u8]) -> Array2<u8> {

@@ -1,4 +1,4 @@
-use crate::types::{Algorithm, BenchmarkConfig, CodeType};
+use crate::types::{Algorithm, BenchmarkConfig, CodePreset, CodeType};
 
 #[allow(dead_code)]
 impl BenchmarkConfig {
@@ -125,41 +125,31 @@ impl BenchmarkConfig {
 
     // ==================== REAL-WORLD CONFIGURATIONS ====================
 
-    // Real-world Goppa parameters (adjusted for field size and constraints)
+    // Real-world Goppa parameters (official Classic McEliece sets)
     pub fn real_world_goppa(security_level: usize) -> Self {
-        let params = [
-            (2047, 1695, 27),  // ~80-bit classical security (reduced)
-            (3487, 2719, 64),  // ~128-bit classical / NIST Level 1 (reduced)
-            (4095, 3359, 96),  // ~192-bit classical / NIST Level 3 (reduced)
-            (6939, 5412, 119), // ~256-bit classical / NIST Level 5 (reduced)
-        ];
-        let (n, k, w) = params[security_level];
+        let preset = match security_level {
+            0 => CodePreset::ClassicMceliece348864,
+            1 => CodePreset::ClassicMceliece460896,
+            2 => CodePreset::ClassicMceliece6688128,
+            _ => panic!(
+                "Unsupported Classic McEliece security level index {}",
+                security_level
+            ),
+        };
 
-        Self {
-            n,
-            k,
-            w,
-            code_type: CodeType::Goppa,
-            ..Self::default()
-        }
+        Self::default().with_preset(preset)
     }
 
-    // Real-world QC-MDPC parameters (adjusted for field size and QC constraints)
+    // Real-world QC-MDPC parameters (official HQC sets)
     pub fn real_world_qc(security_level: usize) -> Self {
-        let params = [
-            (8190, 4095, 142),  // NIST Level 1 (n=2*4095, k=1*4095)
-            (16382, 8191, 159), // NIST Level 3 (n=2*8191, k=1*8191)
-            (24573, 8191, 199), // NIST Level 5 (n=3*8191, k=1*8191)
-        ];
-        let (n, k, w) = params[security_level];
+        let preset = match security_level {
+            0 => CodePreset::Hqc128,
+            1 => CodePreset::Hqc192,
+            2 => CodePreset::Hqc256,
+            _ => panic!("Unsupported HQC security level index {}", security_level),
+        };
 
-        Self {
-            n,
-            k,
-            w,
-            code_type: CodeType::Qc,
-            ..Self::default()
-        }
+        Self::default().with_preset(preset)
     }
 
     // ==================== BUILDER METHODS ====================
