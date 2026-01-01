@@ -26,6 +26,7 @@ pub enum Algorithm {
     Bjmm,
     Patterson,
     Mmt,
+    FiniaszSendrier,
 }
 
 impl Algorithm {
@@ -38,6 +39,7 @@ impl Algorithm {
             Algorithm::Bjmm => "bjmm",
             Algorithm::Patterson => "patterson",
             Algorithm::Mmt => "mmt",
+            Algorithm::FiniaszSendrier => "finiasz-sendrier",
         }
     }
 

@@ -43,6 +43,18 @@ enum Commands {
         #[arg(long, value_enum)]
         preset: Option<CodePreset>,
     },
+    FiniaszSendrier {
+        #[arg(short, long, default_value_t = 23)]
+        n: usize,
+        #[arg(short, long, default_value_t = 12)]
+        k: usize,
+        #[arg(short, long, default_value_t = 3)]
+        w: usize,
+        #[arg(short, long, value_enum, default_value_t = CodeType::Random)]
+        code_type: CodeType,
+        #[arg(long, value_enum)]
+        preset: Option<CodePreset>,
+    },
     LeeBrickell {
         #[arg(short, long, default_value_t = 23)]
         n: usize,
@@ -141,6 +153,23 @@ fn main() {
                 return;
             };
             run_algorithm(Algorithm::Stern, code_params, None);
+        }
+        Commands::FiniaszSendrier {
+            n,
+            k,
+            w,
+            code_type,
+            preset,
+        } => {
+            let Some(code_params) = resolve_code_params(
+                CodeParams { n, k, w, code_type },
+                preset,
+                None,
+                "finiasz-sendrier",
+            ) else {
+                return;
+            };
+            run_algorithm(Algorithm::FiniaszSendrier, code_params, None);
         }
         Commands::LeeBrickell {
             n,

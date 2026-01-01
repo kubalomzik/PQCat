@@ -57,3 +57,30 @@ pub fn calculate_partial_syndrome(h: &Array2<u8>, indices: &[usize], r: usize) -
 
     syndrome
 }
+
+pub fn permute_columns(matrix: &Array2<u8>, permutation: &[usize]) -> Array2<u8> {
+    let (rows, cols) = matrix.dim();
+    assert_eq!(cols, permutation.len());
+    let mut permuted = Array2::<u8>::zeros((rows, cols));
+    for (new_idx, &old_idx) in permutation.iter().enumerate() {
+        let column = matrix.column(old_idx).to_owned();
+        permuted.column_mut(new_idx).assign(&column);
+    }
+    permuted
+}
+
+pub fn xor_assign(target: &mut Vec<u8>, other: &[u8]) {
+    assert_eq!(target.len(), other.len());
+    for (t, &o) in target.iter_mut().zip(other.iter()) {
+        *t ^= o;
+    }
+}
+
+pub fn apply_inverse_permutation(vector: &[u8], permutation: &[usize]) -> Vec<u8> {
+    assert_eq!(vector.len(), permutation.len());
+    let mut original = vec![0u8; vector.len()];
+    for (idx, &orig_pos) in permutation.iter().enumerate() {
+        original[orig_pos] = vector[idx];
+    }
+    original
+}

@@ -2,7 +2,9 @@ use crate::algorithms::algorithm_utils::{
     apply_errors, calculate_syndrome, generate_random_error_vector,
 };
 use crate::algorithms::metrics::{AlgorithmMetrics, print_metrics};
-use crate::algorithms::{ball_collision, bjmm, lee_brickell, mmt, patterson, prange, stern};
+use crate::algorithms::{
+    ball_collision, bjmm, finiasz_sendrier, lee_brickell, mmt, patterson, prange, stern,
+};
 use crate::code_generator::generate_code;
 use crate::types::{Algorithm, CodeParams, PartitionParams};
 
@@ -56,6 +58,9 @@ pub fn run_algorithm(
         }
         Algorithm::Prange => prange::run_prange_algorithm(&received_vector, &h, code_params.w),
         Algorithm::Stern => stern::run_stern_algorithm(&received_vector, &h, code_params.w),
+        Algorithm::FiniaszSendrier => {
+            finiasz_sendrier::run_finiasz_sendrier_algorithm(&received_vector, &h, code_params.w)
+        }
         Algorithm::LeeBrickell => lee_brickell::run_lee_brickell_algorithm(
             &received_vector,
             &h,

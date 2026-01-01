@@ -4,6 +4,7 @@ PQCat (Post-Quantum Cryptography Classical Attack Tool) is a Rust-based framewor
 
 - **Prange's Algorithm**
 - **Stern's Algorithm**
+- **Finiasz-Sendrier's Algorithm**
 - **Lee-Brickell's Algorithm**
 - **Ball Collision Decoding**
 - **May-Meurer-Thomae's (MMT) Algorithm**
@@ -51,6 +52,7 @@ PQCat exposes each decoding algorithm as a `pqcat <algorithm>` subcommand. Valid
 
 - `prange`
 - `stern`
+- `finiasz-sendrier`
 - `lee-brickell`
 - `ball-collision`
 - `bjmm`
