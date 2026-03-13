@@ -52,6 +52,7 @@ pub fn run_algorithm(
                     AlgorithmMetrics {
                         time: 0,
                         peak_memory: 0,
+                        best_syndrome_distance: 0,
                     },
                 )
             }

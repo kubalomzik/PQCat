@@ -1,4 +1,4 @@
-use crate::algorithms::algorithm_utils::calculate_syndrome;
+use crate::algorithms::algorithm_utils::{calculate_syndrome, syndrome_distance};
 use crate::algorithms::metrics::{AlgorithmMetrics, start_memory_tracking, update_peak_memory};
 use crate::codes::polynomial_utils::{evaluate_poly, trim_polynomial};
 use crate::types::FiniteField;
@@ -212,6 +212,8 @@ pub fn run_patterson_algorithm(
     let t = goppa_params.t;
 
     let n = received_vector.len();
+    let r = h.shape()[0];
+    let mut best_sd = r;
 
     // Compute the syndrome polynomial S(z)
     let syndrome = compute_syndrome_polynomial(received_vector, support, goppa_poly, field, n);
@@ -223,6 +225,7 @@ pub fn run_patterson_algorithm(
         let metrics = AlgorithmMetrics {
             time: start_time.elapsed().as_micros() as usize,
             peak_memory,
+            best_syndrome_distance: 0,
         };
 
         return (Some(vec![0; n]), metrics);
@@ -276,6 +279,8 @@ pub fn run_patterson_algorithm(
 
         // Check if the result is a valid codeword
         let result_syndrome = calculate_syndrome(&received_xor_error, h);
+        let sd = syndrome_distance(&result_syndrome, &vec![0u8; r]);
+        best_sd = best_sd.min(sd);
 
         if result_syndrome.iter().all(|&x| x == 0) {
             // Success - we found a valid error pattern
@@ -283,6 +288,7 @@ pub fn run_patterson_algorithm(
             let metrics = AlgorithmMetrics {
                 time: start_time.elapsed().as_micros() as usize,
                 peak_memory,
+                best_syndrome_distance: 0,
             };
             return (Some(error_vector), metrics);
         }
@@ -333,6 +339,7 @@ pub fn run_patterson_algorithm(
                 let metrics = AlgorithmMetrics {
                     time: start_time.elapsed().as_micros() as usize,
                     peak_memory,
+                    best_syndrome_distance: 0,
                 };
 
                 return (Some(trial_error), metrics);
@@ -368,6 +375,7 @@ pub fn run_patterson_algorithm(
                     let metrics = AlgorithmMetrics {
                         time: start_time.elapsed().as_micros() as usize,
                         peak_memory,
+                        best_syndrome_distance: 0,
                     };
 
                     return (Some(trial_error), metrics);
@@ -399,6 +407,7 @@ pub fn run_patterson_algorithm(
                         let metrics = AlgorithmMetrics {
                             time: start_time.elapsed().as_micros() as usize,
                             peak_memory,
+                            best_syndrome_distance: 0,
                         };
 
                         return (Some(trial_error), metrics);
@@ -437,6 +446,7 @@ pub fn run_patterson_algorithm(
                     let metrics = AlgorithmMetrics {
                         time: start_time.elapsed().as_micros() as usize,
                         peak_memory,
+                        best_syndrome_distance: 0,
                     };
 
                     return (Some(trial_error), metrics);
@@ -450,6 +460,7 @@ pub fn run_patterson_algorithm(
     let metrics = AlgorithmMetrics {
         time: start_time.elapsed().as_micros() as usize,
         peak_memory,
+        best_syndrome_distance: best_sd,
     };
 
     (None, metrics)

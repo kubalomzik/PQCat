@@ -3,6 +3,7 @@ use memory_stats::memory_stats;
 pub struct AlgorithmMetrics {
     pub time: usize,
     pub peak_memory: usize,
+    pub best_syndrome_distance: usize,
 }
 
 /// Get initial memory usage
@@ -29,4 +30,5 @@ pub fn update_peak_memory(start_memory: usize, current_peak: &mut usize) {
 pub fn print_metrics(metrics: &AlgorithmMetrics) {
     println!("Time: {} μs", metrics.time);
     println!("Peak memory: {} KiB", metrics.peak_memory / 1024);
+    println!("Best syndrome distance: {}", metrics.best_syndrome_distance);
 }

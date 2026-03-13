@@ -58,6 +58,7 @@ pub fn run_mmt_algorithm(
     let mut rng = rng();
     let r = h.shape()[0]; // Number of rows in H (syndrome length)
     let syndrome_vec: Vec<u8> = syndrome.iter().copied().collect();
+    let mut best_sd = r;
 
     // ===== PHASE 1: Generate lists L1 and L2 =====
 
@@ -153,12 +154,17 @@ pub fn run_mmt_algorithm(
                             }
                         }
 
+                        let sd: usize = check_syndrome.iter().zip(syndrome_vec.iter())
+                            .map(|(&a, &b)| (a ^ b) as usize).sum();
+                        best_sd = best_sd.min(sd);
+
                         if check_syndrome == syndrome_vec {
                             update_peak_memory(start_memory, &mut peak_memory);
 
                             let metrics = AlgorithmMetrics {
                                 time: start_time.elapsed().as_micros() as usize,
                                 peak_memory,
+                                best_syndrome_distance: 0,
                             };
 
                             return (Some(candidate_error), metrics);
@@ -174,6 +180,7 @@ pub fn run_mmt_algorithm(
     let metrics = AlgorithmMetrics {
         time: start_time.elapsed().as_micros() as usize,
         peak_memory,
+        best_syndrome_distance: best_sd,
     };
 
     (None, metrics)

@@ -27,6 +27,16 @@ pub fn extract_memory(output: &str) -> Option<u64> {
     None
 }
 
+pub fn extract_syndrome_distance(output: &str) -> Option<u64> {
+    let re = Regex::new(r"Best syndrome distance:\s*(\d+)").unwrap();
+    if let Some(captures) = re.captures(output) {
+        if let Some(sd_str) = captures.get(1) {
+            return sd_str.as_str().parse::<u64>().ok();
+        }
+    }
+    None
+}
+
 pub fn ensure_results_directory() {
     if !Path::new("./results").exists() {
         fs::create_dir("./results").expect("Failed to create results directory");
@@ -45,7 +55,7 @@ pub fn create_output_files(config: &BenchmarkConfig) -> (Writer<File>, String) {
     let mut writer = Writer::from_writer(file);
 
     writer
-        .write_record(["Run", "Time (μs)", "Memory (KiB)", "Result"])
+        .write_record(["Run", "Time (μs)", "Memory (KiB)", "Result", "Best Syndrome Distance"])
         .expect("Failed to write CSV headers");
 
     let txt_filename = format!(
@@ -62,12 +72,13 @@ pub fn execute_benchmark_runs(config: &BenchmarkConfig) -> Vec<BenchmarkResult> 
         match execute_single_run(config, run) {
             Some(result) => {
                 println!(
-                    "Run {}/{}: Time = {} μs, Memory = {} KiB, Result = {}",
+                    "Run {}/{}: Time = {} μs, Memory = {} KiB, Result = {}, Best Syndrome Distance = {}",
                     run,
                     config.runs,
                     result.duration,
                     result.memory,
-                    if result.success { "success" } else { "fail" }
+                    if result.success { "success" } else { "fail" },
+                    result.best_syndrome_distance
                 );
 
                 results.push(result);
@@ -109,11 +120,13 @@ pub fn execute_single_run(config: &BenchmarkConfig, run: usize) -> Option<Benchm
 
     let duration = extract_time(&stdout_str).unwrap_or(0);
     let memory = extract_memory(&stdout_str).unwrap_or(0);
+    let best_syndrome_distance = extract_syndrome_distance(&stdout_str).unwrap_or(0);
 
     Some(BenchmarkResult {
         duration,
         memory,
         success,
+        best_syndrome_distance,
     })
 }
 
@@ -165,15 +178,18 @@ pub fn calculate_statistics(results: &[BenchmarkResult]) -> BenchmarkStats {
             time_ci_upper: 0.0,
             memory_ci_lower: 0.0,
             memory_ci_upper: 0.0,
+            median_syndrome_distance: 0.0,
         };
     }
 
     // Extract and sort durations and memory values
     let mut durations: Vec<u64> = results.iter().map(|r| r.duration).collect();
     let mut memories: Vec<u64> = results.iter().map(|r| r.memory).collect();
+    let mut syndrome_distances: Vec<u64> = results.iter().map(|r| r.best_syndrome_distance).collect();
 
     durations.sort();
     memories.sort();
+    syndrome_distances.sort();
 
     // Calculate medians
     let median_time = if completed_runs % 2 == 0 {
@@ -188,6 +204,13 @@ pub fn calculate_statistics(results: &[BenchmarkResult]) -> BenchmarkStats {
         (memories[mid - 1] + memories[mid]) as f64 / 2.0
     } else {
         memories[completed_runs / 2] as f64
+    };
+
+    let median_syndrome_distance = if completed_runs % 2 == 0 {
+        let mid = completed_runs / 2;
+        (syndrome_distances[mid - 1] + syndrome_distances[mid]) as f64 / 2.0
+    } else {
+        syndrome_distances[completed_runs / 2] as f64
     };
 
     // Calculate 95% confidence interval indices
@@ -224,6 +247,7 @@ pub fn calculate_statistics(results: &[BenchmarkResult]) -> BenchmarkStats {
         time_ci_upper: time_ci_upper_diff,
         memory_ci_lower: memory_ci_lower_diff,
         memory_ci_upper: memory_ci_upper_diff,
+        median_syndrome_distance,
     }
 }
 
@@ -269,6 +293,12 @@ pub fn write_results_to_file(
         stats.success_rate, stats.successful_runs, stats.completed_runs
     )
     .unwrap();
+    writeln!(
+        txt_file,
+        "Median Best Syndrome Distance: {:.1}",
+        stats.median_syndrome_distance
+    )
+    .unwrap();
 }
 
 pub fn print_summary(config: &BenchmarkConfig, stats: &BenchmarkStats) {
@@ -287,7 +317,11 @@ pub fn print_summary(config: &BenchmarkConfig, stats: &BenchmarkStats) {
         stats.median_memory, stats.memory_ci_lower, stats.memory_ci_upper
     );
     println!(
-        "Success Rate: {:.2}% ({}/{})\n\n",
+        "Success Rate: {:.2}% ({}/{})\n",
         stats.success_rate, stats.successful_runs, stats.completed_runs
+    );
+    println!(
+        "Median Best Syndrome Distance: {:.1}\n\n",
+        stats.median_syndrome_distance
     );
 }

@@ -1,4 +1,4 @@
-use crate::algorithms::algorithm_utils::{calculate_partial_syndrome, calculate_syndrome};
+use crate::algorithms::algorithm_utils::{calculate_partial_syndrome, calculate_syndrome, syndrome_distance};
 use crate::algorithms::config::{LIST_SIZE, MAX_ITERATIONS};
 use crate::algorithms::metrics::{AlgorithmMetrics, start_memory_tracking, update_peak_memory};
 use ndarray::Array2;
@@ -20,6 +20,7 @@ pub fn run_bjmm_algorithm(
     let target_syndrome = calculate_syndrome(received_vector, h);
     update_peak_memory(start_memory, &mut peak_memory);
     let r = h.shape()[0];
+    let mut best_sd = r;
     let mut rng = rng();
 
     for _iteration in 0..MAX_ITERATIONS {
@@ -147,12 +148,15 @@ pub fn run_bjmm_algorithm(
 
                                         let check_syndrome =
                                             calculate_syndrome(&candidate_error, h);
+                                        let sd = syndrome_distance(&check_syndrome, &target_syndrome);
+                                        best_sd = best_sd.min(sd);
                                         if check_syndrome == target_syndrome {
                                             update_peak_memory(start_memory, &mut peak_memory);
 
                                             let metrics = AlgorithmMetrics {
                                                 time: start_time.elapsed().as_micros() as usize,
                                                 peak_memory,
+                                                best_syndrome_distance: 0,
                                             };
 
                                             return (Some(candidate_error), metrics);
@@ -172,6 +176,7 @@ pub fn run_bjmm_algorithm(
     let metrics = AlgorithmMetrics {
         time: start_time.elapsed().as_micros() as usize,
         peak_memory,
+        best_syndrome_distance: best_sd,
     };
 
     (None, metrics)

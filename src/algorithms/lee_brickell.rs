@@ -97,6 +97,7 @@ pub fn run_lee_brickell_algorithm(
                     let metrics = AlgorithmMetrics {
                         time: start_time.elapsed().as_micros() as usize,
                         peak_memory,
+                        best_syndrome_distance: 0,
                     };
 
                     return (Some(candidate_error), metrics);
@@ -107,9 +108,11 @@ pub fn run_lee_brickell_algorithm(
 
     update_peak_memory(start_memory, &mut peak_memory);
 
+    let r = h.shape()[0];
     let metrics = AlgorithmMetrics {
         time: start_time.elapsed().as_micros() as usize,
         peak_memory,
+        best_syndrome_distance: r,
     };
 
     (None, metrics)

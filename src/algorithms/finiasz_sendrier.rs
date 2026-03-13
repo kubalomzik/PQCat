@@ -27,6 +27,7 @@ pub fn run_finiasz_sendrier_algorithm(
         let metrics = AlgorithmMetrics {
             time: start_time.elapsed().as_micros() as usize,
             peak_memory,
+            best_syndrome_distance: 0,
         };
         return (Some(vec![0u8; cols]), metrics);
     }
@@ -191,6 +192,7 @@ pub fn run_finiasz_sendrier_algorithm(
                     let metrics = AlgorithmMetrics {
                         time: start_time.elapsed().as_micros() as usize,
                         peak_memory,
+                        best_syndrome_distance: 0,
                     };
 
                     return (Some(candidate_error), metrics);
@@ -203,6 +205,7 @@ pub fn run_finiasz_sendrier_algorithm(
     let metrics = AlgorithmMetrics {
         time: start_time.elapsed().as_micros() as usize,
         peak_memory,
+        best_syndrome_distance: rows,
     };
     (None, metrics)
 }

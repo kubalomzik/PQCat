@@ -246,6 +246,7 @@ pub struct BenchmarkResult {
     pub duration: u64,
     pub memory: u64,
     pub success: bool,
+    pub best_syndrome_distance: u64,
 }
 
 pub struct BenchmarkStats {
@@ -258,4 +259,5 @@ pub struct BenchmarkStats {
     pub time_ci_upper: f64,
     pub memory_ci_lower: f64,
     pub memory_ci_upper: f64,
+    pub median_syndrome_distance: f64,
 }

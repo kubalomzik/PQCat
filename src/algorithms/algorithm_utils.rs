@@ -45,6 +45,10 @@ pub fn generate_subsets(indices: &[usize], size: usize) -> impl Iterator<Item = 
     indices.iter().cloned().combinations(size)
 }
 
+pub fn syndrome_distance(a: &[u8], b: &[u8]) -> usize {
+    a.iter().zip(b.iter()).map(|(&x, &y)| (x ^ y) as usize).sum()
+}
+
 /// Calculate syndrome contribution from a subset of columns
 pub fn calculate_partial_syndrome(h: &Array2<u8>, indices: &[usize], r: usize) -> Vec<u8> {
     let mut syndrome = vec![0; r];
