@@ -154,8 +154,11 @@ pub fn run_mmt_algorithm(
                             }
                         }
 
-                        let sd: usize = check_syndrome.iter().zip(syndrome_vec.iter())
-                            .map(|(&a, &b)| (a ^ b) as usize).sum();
+                        let sd: usize = check_syndrome
+                            .iter()
+                            .zip(syndrome_vec.iter())
+                            .map(|(&a, &b)| (a ^ b) as usize)
+                            .sum();
                         best_sd = best_sd.min(sd);
 
                         if check_syndrome == syndrome_vec {

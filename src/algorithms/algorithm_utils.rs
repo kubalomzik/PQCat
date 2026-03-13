@@ -46,7 +46,10 @@ pub fn generate_subsets(indices: &[usize], size: usize) -> impl Iterator<Item = 
 }
 
 pub fn syndrome_distance(a: &[u8], b: &[u8]) -> usize {
-    a.iter().zip(b.iter()).map(|(&x, &y)| (x ^ y) as usize).sum()
+    a.iter()
+        .zip(b.iter())
+        .map(|(&x, &y)| (x ^ y) as usize)
+        .sum()
 }
 
 /// Calculate syndrome contribution from a subset of columns

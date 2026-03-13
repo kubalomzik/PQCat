@@ -1,4 +1,6 @@
-use crate::algorithms::algorithm_utils::{calculate_partial_syndrome, calculate_syndrome, syndrome_distance};
+use crate::algorithms::algorithm_utils::{
+    calculate_partial_syndrome, calculate_syndrome, syndrome_distance,
+};
 use crate::algorithms::config::{LIST_SIZE, MAX_ITERATIONS};
 use crate::algorithms::metrics::{AlgorithmMetrics, start_memory_tracking, update_peak_memory};
 use ndarray::Array2;
@@ -148,7 +150,8 @@ pub fn run_bjmm_algorithm(
 
                                         let check_syndrome =
                                             calculate_syndrome(&candidate_error, h);
-                                        let sd = syndrome_distance(&check_syndrome, &target_syndrome);
+                                        let sd =
+                                            syndrome_distance(&check_syndrome, &target_syndrome);
                                         best_sd = best_sd.min(sd);
                                         if check_syndrome == target_syndrome {
                                             update_peak_memory(start_memory, &mut peak_memory);
