@@ -1,10 +1,14 @@
 use crate::algorithm_runner::run_single_benchmark;
 use crate::code_generator::generate_code;
-use crate::types::{Algorithm, BenchmarkConfig, BenchmarkResult, BenchmarkStats, CodeParams, PartitionParams};
+use crate::types::{
+    Algorithm, BenchmarkConfig, BenchmarkResult, BenchmarkStats, CodeParams, PartitionParams,
+};
 use csv::Writer;
+use rayon::prelude::*;
 use std::fs::{self, File};
 use std::io::Write;
 use std::path::Path;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 pub fn ensure_results_directory() {
     if !Path::new("./results").exists() {
@@ -24,7 +28,13 @@ pub fn create_output_files(config: &BenchmarkConfig) -> (Writer<File>, String) {
     let mut writer = Writer::from_writer(file);
 
     writer
-        .write_record(["Run", "Time (μs)", "Memory (KiB)", "Result", "Best Syndrome Distance"])
+        .write_record([
+            "Run",
+            "Time (μs)",
+            "Memory (KiB)",
+            "Result",
+            "Best Syndrome Distance",
+        ])
         .expect("Failed to write CSV headers");
 
     let txt_filename = format!(
@@ -58,31 +68,39 @@ pub fn execute_benchmark_runs(config: &BenchmarkConfig) -> Vec<BenchmarkResult> 
         config.code_type, config.n, config.k, config.w
     );
     let (g, h, goppa_params) = generate_code(config.n, config.k, config.w, config.code_type);
-    println!("Code generated. Starting {} runs...", config.runs);
+    println!(
+        "Code generated. Starting {} runs (parallel)...",
+        config.runs
+    );
 
-    let mut results = Vec::with_capacity(config.runs);
-    for run in 1..=config.runs {
-        let result = run_single_benchmark(
-            config.algorithm,
-            &code_params,
-            &partition_params,
-            &g,
-            &h,
-            &goppa_params,
-        );
+    let completed = AtomicUsize::new(0);
 
-        println!(
-            "Run {}/{}: Time = {} μs, Memory = {} KiB, Result = {}, Best Syndrome Distance = {}",
-            run,
-            config.runs,
-            result.duration,
-            result.memory,
-            if result.success { "success" } else { "fail" },
-            result.best_syndrome_distance
-        );
+    let results: Vec<BenchmarkResult> = (0..config.runs)
+        .into_par_iter()
+        .map(|_| {
+            let result = run_single_benchmark(
+                config.algorithm,
+                &code_params,
+                &partition_params,
+                &g,
+                &h,
+                &goppa_params,
+            );
 
-        results.push(result);
-    }
+            let run_num = completed.fetch_add(1, Ordering::Relaxed) + 1;
+            println!(
+                "Run {}/{}: Time = {} μs, Memory = {} KiB, Result = {}, Best Syndrome Distance = {}",
+                run_num,
+                config.runs,
+                result.duration,
+                result.memory,
+                if result.success { "success" } else { "fail" },
+                result.best_syndrome_distance
+            );
+
+            result
+        })
+        .collect();
 
     results
 }
@@ -108,7 +126,8 @@ pub fn calculate_statistics(results: &[BenchmarkResult]) -> BenchmarkStats {
     // Extract and sort durations and memory values
     let mut durations: Vec<u64> = results.iter().map(|r| r.duration).collect();
     let mut memories: Vec<u64> = results.iter().map(|r| r.memory).collect();
-    let mut syndrome_distances: Vec<u64> = results.iter().map(|r| r.best_syndrome_distance).collect();
+    let mut syndrome_distances: Vec<u64> =
+        results.iter().map(|r| r.best_syndrome_distance).collect();
 
     durations.sort();
     memories.sort();
