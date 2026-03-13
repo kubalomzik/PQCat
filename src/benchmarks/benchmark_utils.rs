@@ -1,41 +1,10 @@
-use crate::types::{Algorithm, BenchmarkConfig, BenchmarkResult, BenchmarkStats};
+use crate::algorithm_runner::run_single_benchmark;
+use crate::code_generator::generate_code;
+use crate::types::{Algorithm, BenchmarkConfig, BenchmarkResult, BenchmarkStats, CodeParams, PartitionParams};
 use csv::Writer;
-use regex::Regex;
 use std::fs::{self, File};
 use std::io::Write;
 use std::path::Path;
-use std::process::Command;
-use sysinfo::System;
-
-pub fn extract_time(output: &str) -> Option<u64> {
-    let re = Regex::new(r"Time:\s*(\d+)\s*μs").unwrap();
-    if let Some(captures) = re.captures(output) {
-        if let Some(time_str) = captures.get(1) {
-            return time_str.as_str().parse::<u64>().ok();
-        }
-    }
-    None
-}
-
-pub fn extract_memory(output: &str) -> Option<u64> {
-    let re = Regex::new(r"Peak memory:\s*(\d+)\s*KiB").unwrap();
-    if let Some(captures) = re.captures(output) {
-        if let Some(mem_str) = captures.get(1) {
-            return mem_str.as_str().parse::<u64>().ok();
-        }
-    }
-    None
-}
-
-pub fn extract_syndrome_distance(output: &str) -> Option<u64> {
-    let re = Regex::new(r"Best syndrome distance:\s*(\d+)").unwrap();
-    if let Some(captures) = re.captures(output) {
-        if let Some(sd_str) = captures.get(1) {
-            return sd_str.as_str().parse::<u64>().ok();
-        }
-    }
-    None
-}
 
 pub fn ensure_results_directory() {
     if !Path::new("./results").exists() {
@@ -67,101 +36,55 @@ pub fn create_output_files(config: &BenchmarkConfig) -> (Writer<File>, String) {
 }
 
 pub fn execute_benchmark_runs(config: &BenchmarkConfig) -> Vec<BenchmarkResult> {
+    let code_params = CodeParams {
+        n: config.n,
+        k: config.k,
+        w: config.w,
+        code_type: config.code_type,
+    };
+
+    let partition_params = if config.algorithm == Algorithm::Mmt {
+        Some(PartitionParams {
+            p: config.p,
+            l1: config.l1,
+            l2: config.l2,
+        })
+    } else {
+        None
+    };
+
+    println!(
+        "Generating {} code (n={}, k={}, w={})...",
+        config.code_type, config.n, config.k, config.w
+    );
+    let (g, h, goppa_params) = generate_code(config.n, config.k, config.w, config.code_type);
+    println!("Code generated. Starting {} runs...", config.runs);
+
     let mut results = Vec::with_capacity(config.runs);
     for run in 1..=config.runs {
-        match execute_single_run(config, run) {
-            Some(result) => {
-                println!(
-                    "Run {}/{}: Time = {} μs, Memory = {} KiB, Result = {}, Best Syndrome Distance = {}",
-                    run,
-                    config.runs,
-                    result.duration,
-                    result.memory,
-                    if result.success { "success" } else { "fail" },
-                    result.best_syndrome_distance
-                );
+        let result = run_single_benchmark(
+            config.algorithm,
+            &code_params,
+            &partition_params,
+            &g,
+            &h,
+            &goppa_params,
+        );
 
-                results.push(result);
-            }
-            None => continue, // Skip failed runs
-        }
+        println!(
+            "Run {}/{}: Time = {} μs, Memory = {} KiB, Result = {}, Best Syndrome Distance = {}",
+            run,
+            config.runs,
+            result.duration,
+            result.memory,
+            if result.success { "success" } else { "fail" },
+            result.best_syndrome_distance
+        );
+
+        results.push(result);
     }
 
     results
-}
-
-pub fn execute_single_run(config: &BenchmarkConfig, run: usize) -> Option<BenchmarkResult> {
-    let mut sys = System::new_all();
-    sys.refresh_all();
-
-    let mut cmd = build_command(config);
-    cmd.stdout(std::process::Stdio::piped());
-
-    let child = cmd.spawn().expect("Failed to spawn process");
-    let output = match child.wait_with_output() {
-        Ok(output) => output,
-        Err(e) => {
-            eprintln!("Run {} failed: {}", run, e);
-            return None;
-        }
-    };
-
-    if !output.status.success() {
-        eprintln!(
-            "Run {} failed: {}",
-            run,
-            String::from_utf8_lossy(&output.stderr)
-        );
-        return None;
-    }
-
-    let stdout_str = String::from_utf8_lossy(&output.stdout);
-    let success = stdout_str.contains("success");
-
-    let duration = extract_time(&stdout_str).unwrap_or(0);
-    let memory = extract_memory(&stdout_str).unwrap_or(0);
-    let best_syndrome_distance = extract_syndrome_distance(&stdout_str).unwrap_or(0);
-
-    Some(BenchmarkResult {
-        duration,
-        memory,
-        success,
-        best_syndrome_distance,
-    })
-}
-
-pub fn build_command(config: &BenchmarkConfig) -> Command {
-    let mut cmd = Command::new("./target/release/pqcat");
-
-    cmd.arg(config.algorithm.as_cli_subcommand());
-
-    // Add common parameters
-    cmd.arg("--n")
-        .arg(config.n.to_string())
-        .arg("--k")
-        .arg(config.k.to_string())
-        .arg("--w")
-        .arg(config.w.to_string());
-
-    // Add code type parameter except for Patterson (which is always Goppa)
-    if config.algorithm != Algorithm::Patterson {
-        cmd.arg("--code-type").arg(config.code_type.as_str());
-    }
-
-    // Add MMT-specific parameters if needed
-    if config.algorithm == Algorithm::Mmt {
-        if let Some(p) = config.p {
-            cmd.arg("--p").arg(p.to_string());
-        }
-        if let Some(l1) = config.l1 {
-            cmd.arg("--l1").arg(l1.to_string());
-        }
-        if let Some(l2) = config.l2 {
-            cmd.arg("--l2").arg(l2.to_string());
-        }
-    }
-
-    cmd
 }
 
 pub fn calculate_statistics(results: &[BenchmarkResult]) -> BenchmarkStats {

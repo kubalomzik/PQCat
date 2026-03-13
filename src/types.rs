@@ -42,11 +42,6 @@ impl Algorithm {
             Algorithm::FiniaszSendrier => "finiasz-sendrier",
         }
     }
-
-    pub fn as_cli_subcommand(&self) -> &'static str {
-        // Clap uses the kebab-case representation for subcommand names
-        self.as_str()
-    }
 }
 
 impl fmt::Display for Algorithm {

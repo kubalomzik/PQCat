@@ -1,6 +1,6 @@
 use crate::benchmarks::benchmark_utils::{
-    calculate_statistics, create_output_files, ensure_results_directory, execute_benchmark_runs,
-    print_summary, write_results_to_file,
+    calculate_statistics, create_output_files, ensure_results_directory,
+    execute_benchmark_runs, print_summary, write_results_to_file,
 };
 use crate::types::{Algorithm, BenchmarkConfig};
 
