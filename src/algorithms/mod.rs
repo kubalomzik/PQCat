@@ -1,5 +1,6 @@
 pub mod algorithm_utils;
 pub mod ball_collision;
+pub mod bitpacked;
 pub mod bjmm;
 pub mod config;
 pub mod finiasz_sendrier;

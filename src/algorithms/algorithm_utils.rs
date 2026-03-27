@@ -1,3 +1,4 @@
+use crate::algorithms::bitpacked;
 use itertools::Itertools;
 use ndarray::Array2;
 use rand::rng;
@@ -27,18 +28,9 @@ pub fn apply_errors(codeword: &[u8], error_vector: &[u8]) -> Vec<u8> {
 }
 
 pub fn calculate_syndrome(error_vector: &[u8], h: &Array2<u8>) -> Vec<u8> {
-    let syndrome: Vec<u8> = h
-        .outer_iter()
-        .map(|row| {
-            let row_vec: Vec<u8> = row.to_owned().to_vec();
-            row_vec
-                .iter()
-                .zip(error_vector.iter())
-                .map(|(r, e)| r & e) // Perform element-wise dot product (mod 2)
-                .fold(0, |acc, x| acc ^ x) // XOR all elements to get the syndrome
-        })
-        .collect();
-    syndrome
+    let packed_rows = bitpacked::pack_matrix_rows(h);
+    let packed_vec = bitpacked::pack_bits(error_vector);
+    bitpacked::syndrome_packed(&packed_rows, &packed_vec)
 }
 
 pub fn generate_subsets(indices: &[usize], size: usize) -> impl Iterator<Item = Vec<usize>> + '_ {
@@ -46,10 +38,7 @@ pub fn generate_subsets(indices: &[usize], size: usize) -> impl Iterator<Item = 
 }
 
 pub fn syndrome_distance(a: &[u8], b: &[u8]) -> usize {
-    a.iter()
-        .zip(b.iter())
-        .map(|(&x, &y)| (x ^ y) as usize)
-        .sum()
+    bitpacked::hamming_distance_packed(a, b)
 }
 
 /// Calculate syndrome contribution from a subset of columns
@@ -77,10 +66,7 @@ pub fn permute_columns(matrix: &Array2<u8>, permutation: &[usize]) -> Array2<u8>
 }
 
 pub fn xor_assign(target: &mut [u8], other: &[u8]) {
-    assert_eq!(target.len(), other.len());
-    for (t, &o) in target.iter_mut().zip(other.iter()) {
-        *t ^= o;
-    }
+    bitpacked::xor_assign_packed(target, other);
 }
 
 pub fn apply_inverse_permutation(vector: &[u8], permutation: &[usize]) -> Vec<u8> {
