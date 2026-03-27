@@ -134,21 +134,21 @@ pub fn calculate_statistics(results: &[BenchmarkResult]) -> BenchmarkStats {
     syndrome_distances.sort();
 
     // Calculate medians
-    let median_time = if completed_runs % 2 == 0 {
+    let median_time = if completed_runs.is_multiple_of(2) {
         let mid = completed_runs / 2;
         (durations[mid - 1] + durations[mid]) as f64 / 2.0
     } else {
         durations[completed_runs / 2] as f64
     };
 
-    let median_memory = if completed_runs % 2 == 0 {
+    let median_memory = if completed_runs.is_multiple_of(2) {
         let mid = completed_runs / 2;
         (memories[mid - 1] + memories[mid]) as f64 / 2.0
     } else {
         memories[completed_runs / 2] as f64
     };
 
-    let median_syndrome_distance = if completed_runs % 2 == 0 {
+    let median_syndrome_distance = if completed_runs.is_multiple_of(2) {
         let mid = completed_runs / 2;
         (syndrome_distances[mid - 1] + syndrome_distances[mid]) as f64 / 2.0
     } else {

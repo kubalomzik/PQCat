@@ -50,8 +50,8 @@ pub fn convert_to_systematic(h: Array2<u8>) -> (Array2<u8>, Array2<u8>) {
 
     // Reorder columns so non-pivot columns precede pivot columns, yielding [P^T | I]
     let mut column_order: Vec<usize> = Vec::with_capacity(n);
-    for col in 0..n {
-        if !is_pivot[col] {
+    for (col, &is_piv) in is_pivot.iter().enumerate().take(n) {
+        if !is_piv {
             column_order.push(col);
         }
     }

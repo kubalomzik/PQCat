@@ -76,7 +76,7 @@ pub fn permute_columns(matrix: &Array2<u8>, permutation: &[usize]) -> Array2<u8>
     permuted
 }
 
-pub fn xor_assign(target: &mut Vec<u8>, other: &[u8]) {
+pub fn xor_assign(target: &mut [u8], other: &[u8]) {
     assert_eq!(target.len(), other.len());
     for (t, &o) in target.iter_mut().zip(other.iter()) {
         *t ^= o;

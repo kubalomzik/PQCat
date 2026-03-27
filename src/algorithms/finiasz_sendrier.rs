@@ -64,7 +64,7 @@ pub fn run_finiasz_sendrier_algorithm(
             continue;
         }
 
-        let mut pivot_target = ((weight * rows + cols - 1) / cols).min(weight).min(rows);
+        let mut pivot_target = (weight * rows).div_ceil(cols).min(weight).min(rows);
         let mut free_weight_total = weight.saturating_sub(pivot_target);
 
         if free_weight_total > free_cols {
@@ -79,8 +79,8 @@ pub fn run_finiasz_sendrier_algorithm(
         free_indices.shuffle(&mut rng_handle);
 
         let mut part_lengths = vec![free_cols / PARTITIONS; PARTITIONS];
-        for i in 0..(free_cols % PARTITIONS) {
-            part_lengths[i] += 1;
+        for item in part_lengths.iter_mut().take(free_cols % PARTITIONS) {
+            *item += 1;
         }
 
         let mut partitions: Vec<Vec<usize>> = Vec::with_capacity(PARTITIONS);
@@ -98,11 +98,9 @@ pub fn run_finiasz_sendrier_algorithm(
 
         let mut weights = vec![0usize; PARTITIONS];
         if free_weight_total > 0 {
-            for w in &mut weights {
-                *w = free_weight_total / PARTITIONS;
-            }
-            for i in 0..(free_weight_total % PARTITIONS) {
-                weights[i] += 1;
+            weights.fill(free_weight_total / PARTITIONS);
+            for item in weights.iter_mut().take(free_weight_total % PARTITIONS) {
+                *item += 1;
             }
         }
 
@@ -131,13 +129,14 @@ pub fn run_finiasz_sendrier_algorithm(
         }
         update_peak_memory(start_memory, &mut peak_memory);
 
-        let mut combined_map: HashMap<Vec<u8>, Vec<(Vec<u8>, Vec<usize>, Vec<usize>)>> =
+        type CombinedEntry = (Vec<u8>, Vec<usize>, Vec<usize>);
+        let mut combined_map: HashMap<Vec<u8>, Vec<CombinedEntry>> =
             HashMap::new();
         for (syn_a, subset_a) in &left_entries {
             for (syn_b, subset_b) in &middle_entries {
                 let combined_full = xor_vectors(syn_a, syn_b);
                 let key = combined_full[..main_rows].to_vec();
-                combined_map.entry(key).or_insert_with(Vec::new).push((
+                combined_map.entry(key).or_default().push((
                     combined_full,
                     subset_a.clone(),
                     subset_b.clone(),
@@ -253,8 +252,8 @@ fn parity_check_to_systematic(h: &Array2<u8>) -> Option<(Array2<u8>, Vec<usize>)
     }
 
     let mut column_order = Vec::with_capacity(cols);
-    for col in 0..cols {
-        if !is_pivot[col] {
+    for (col, &is_piv) in is_pivot.iter().enumerate().take(cols) {
+        if !is_piv {
             column_order.push(col);
         }
     }

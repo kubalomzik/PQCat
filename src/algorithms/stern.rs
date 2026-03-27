@@ -47,7 +47,7 @@ pub fn run_stern_algorithm(
         let syndrome = calculate_syndrome(&candidate_error, h);
         left_map
             .entry(syndrome)
-            .or_insert_with(Vec::new)
+            .or_default()
             .push(subset.clone());
     }
 
@@ -61,7 +61,7 @@ pub fn run_stern_algorithm(
         let syndrome = calculate_syndrome(&candidate_error, h);
         right_map
             .entry(syndrome)
-            .or_insert_with(Vec::new)
+            .or_default()
             .push(subset.clone());
     }
 
@@ -73,7 +73,7 @@ pub fn run_stern_algorithm(
         }
         if let Some(right_subsets) = right_map.get(&complement_syndrome) {
             for left_subset in left_subsets {
-                for right_subset in right_subsets {
+                if let Some(right_subset) = right_subsets.first() {
                     // Combine the subsets to form the error vector
                     let mut candidate_error = vec![0; n];
                     for &i in left_subset {

@@ -268,14 +268,14 @@ fn resolve_code_params(
 ) -> Option<CodeParams> {
     if let Some(preset) = preset {
         let preset_params = params.apply_preset(preset);
-        if let Some(required) = required_code_type {
-            if preset_params.code_type != required {
-                eprintln!(
-                    "Preset {} is incompatible with {} command (requires code type {}).",
-                    preset, command_label, required
-                );
-                return None;
-            }
+        if let Some(required) = required_code_type
+            && preset_params.code_type != required
+        {
+            eprintln!(
+                "Preset {} is incompatible with {} command (requires code type {}).",
+                preset, command_label, required
+            );
+            return None;
         }
         println!(
             "Using preset {}: code-type={}, n={}, k={}, w={}",
@@ -283,14 +283,14 @@ fn resolve_code_params(
         );
     }
 
-    if let Some(required) = required_code_type {
-        if params.code_type != required {
-            eprintln!(
-                "Command {} requires code type {} but {} was provided.",
-                command_label, required, params.code_type
-            );
-            return None;
-        }
+    if let Some(required) = required_code_type
+        && params.code_type != required
+    {
+        eprintln!(
+            "Command {} requires code type {} but {} was provided.",
+            command_label, required, params.code_type
+        );
+        return None;
     }
 
     Some(params)
