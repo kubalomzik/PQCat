@@ -45,10 +45,7 @@ pub fn run_stern_algorithm(
             candidate_error[i] = 1;
         }
         let syndrome = calculate_syndrome(&candidate_error, h);
-        left_map
-            .entry(syndrome)
-            .or_default()
-            .push(subset.clone());
+        left_map.entry(syndrome).or_default().push(subset.clone());
     }
 
     // Populate the right map
@@ -59,10 +56,7 @@ pub fn run_stern_algorithm(
             candidate_error[i] = 1;
         }
         let syndrome = calculate_syndrome(&candidate_error, h);
-        right_map
-            .entry(syndrome)
-            .or_default()
-            .push(subset.clone());
+        right_map.entry(syndrome).or_default().push(subset.clone());
     }
 
     // Find matching syndromes in both maps

@@ -55,10 +55,7 @@ pub fn run_lee_brickell_algorithm(
             candidate_error[i] = 1;
         }
         let syndrome = calculate_syndrome(&candidate_error, h);
-        left_map
-            .entry(syndrome)
-            .or_default()
-            .push(subset.clone());
+        left_map.entry(syndrome).or_default().push(subset.clone());
     }
 
     // Right half subsets
@@ -69,10 +66,7 @@ pub fn run_lee_brickell_algorithm(
             candidate_error[i] = 1;
         }
         let syndrome = calculate_syndrome(&candidate_error, h);
-        right_map
-            .entry(syndrome)
-            .or_default()
-            .push(subset.clone());
+        right_map.entry(syndrome).or_default().push(subset.clone());
     }
 
     // Iterate through the left map to find complementary syndromes in the right map
