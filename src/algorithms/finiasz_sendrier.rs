@@ -96,7 +96,7 @@ pub fn run_finiasz_sendrier_algorithm(
             partitions.push(part);
         }
 
-        let mut weights = vec![0usize; PARTITIONS];
+        let mut weights = [0usize; PARTITIONS];
         if free_weight_total > 0 {
             weights.fill(free_weight_total / PARTITIONS);
             for item in weights.iter_mut().take(free_weight_total % PARTITIONS) {
@@ -130,8 +130,7 @@ pub fn run_finiasz_sendrier_algorithm(
         update_peak_memory(start_memory, &mut peak_memory);
 
         type CombinedEntry = (Vec<u8>, Vec<usize>, Vec<usize>);
-        let mut combined_map: HashMap<Vec<u8>, Vec<CombinedEntry>> =
-            HashMap::new();
+        let mut combined_map: HashMap<Vec<u8>, Vec<CombinedEntry>> = HashMap::new();
         for (syn_a, subset_a) in &left_entries {
             for (syn_b, subset_b) in &middle_entries {
                 let combined_full = xor_vectors(syn_a, syn_b);
